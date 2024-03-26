@@ -1,0 +1,59 @@
+
+//
+// Footer
+//
+
+// Desktop Mode
+@include media-breakpoint-up(lg) {
+	.footer {	
+		.footer-fixed & {
+			position: fixed;
+			right: 0;
+			bottom: 0;
+			height: get($footer-config, desktop, fixed, height);
+			z-index: get($footer-config, desktop, fixed, z-index);
+			background-color: var(--#{$prefix}footer-desktop-fixed-bg-color);
+			box-shadow: var(--#{$prefix}footer-desktop-fixed-box-shadow);
+		}
+
+		// Aside secondary enabled & aside fixed modes
+		.footer-fixed.aside-secondary-enabled.aside-fixed & {
+			transition: padding-left get($aside-config, transition-speed) ease;
+			left: get($aside-config, width, desktop);
+		}
+
+		// Aside secondary enabled, aside fixed modes and aside minimize modes
+		.footer-fixed.aside-secondary-enabled.aside-fixed[data-kt-aside-minimize="on"] & {
+			transition: padding-left get($aside-config, transition-speed) ease;
+			left: get($aside-config, primary-width, desktop);
+		}		
+	}	
+
+	.wrapper {
+		.footer-fixed & {
+			padding-bottom: get($footer-config, desktop, fixed, height);
+		}
+	}
+}
+
+// Tablet & mobile modes
+@include media-breakpoint-down(lg) {
+	.footer {	
+		.footer-tablet-and-mobile-fixed & {
+			position: fixed;
+			left: 0;
+			right: 0;
+			bottom: 0;
+			min-height: get($footer-config, tablet-and-mobile, fixed, height);
+			z-index: get($footer-config, tablet-and-mobile, fixed, z-index);
+			background-color: var(--#{$prefix}footer-tablet-and-mobile-fixed-bg-color);
+			box-shadow: var(--#{$prefix}footer-tablet-and-mobile-fixed-box-shadow);
+		}		
+	}	
+
+	.wrapper {
+		.footer-tablet-and-mobile-fixed & {
+			padding-bottom: get($footer-config, tablet-and-mobile, fixed, height);
+		}
+	}
+}

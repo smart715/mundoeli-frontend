@@ -1,0 +1,59 @@
+//
+// Root
+//
+
+// Light mode
+@include color-mode(light) {
+    // Page bg
+    --#{$prefix}page-bg: #{$page-bg};
+
+    // App blank bg color
+    --#{$prefix}app-blank-bg: #{$app-blank-bg-color};
+
+    // Header
+    --#{$prefix}header-desktop-fixed-bg-color: #{get($header-config, desktop, fixed, bg-color)};
+    --#{$prefix}header-desktop-fixed-box-shadow: #{get($header-config, desktop, fixed, box-shadow)};
+
+    --#{$prefix}header-tablet-and-mobile-fixed-bg-color: #{get($header-config, tablet-and-mobile, fixed, bg-color)};
+    --#{$prefix}header-tablet-and-mobile-fixed-box-shadow: #{get($header-config, tablet-and-mobile, fixed, box-shadow)};
+
+     // Footer
+    --#{$prefix}footer-desktop-fixed-bg-color: #{get($footer-config, desktop, fixed, bg-color)};
+    --#{$prefix}footer-desktop-fixed-box-shadow: #{get($footer-config, desktop, fixed, box-shadow)};
+
+    --#{$prefix}footer-tablet-and-mobile-fixed-bg-color: #{get($footer-config, tablet-and-mobile, fixed, bg-color)};
+    --#{$prefix}footer-tablet-and-mobile-fixed-box-shadow: #{get($footer-config, tablet-and-mobile, fixed, box-shadow)};
+
+    // Aside
+    --#{$prefix}aside-bg-color: #{get($aside-config, bg-color)};
+    --#{$prefix}aside-border: #{get($aside-config, border)};
+    --#{$prefix}aside-box-shadow: #{get($aside-config, box-shadow)};
+}
+
+// Dark mode
+@include color-mode(dark) {
+    // Page bg
+    --#{$prefix}page-bg: #{$page-bg-dark};
+
+    // App blank bg color
+    --#{$prefix}app-blank-bg: #{$app-blank-bg-color-dark};
+
+    // Header
+    --#{$prefix}header-desktop-fixed-bg-color: #{get($header-config, desktop, fixed, bg-color-dark)};
+    --#{$prefix}header-desktop-fixed-box-shadow: #{get($header-config, desktop, fixed, box-shadow-dark)};
+
+    --#{$prefix}header-tablet-and-mobile-fixed-bg-color: #{get($header-config, tablet-and-mobile, fixed, bg-color-dark)};
+    --#{$prefix}header-tablet-and-mobile-fixed-box-shadow: #{get($header-config, tablet-and-mobile, fixed, box-shadow-dark)};
+
+    // Footer
+    --#{$prefix}footer-desktop-fixed-bg-color: #{get($footer-config, desktop, fixed, bg-color-dark)};
+    --#{$prefix}footer-desktop-fixed-box-shadow: #{get($footer-config, desktop, fixed, box-shadow-dark)};
+
+    --#{$prefix}footer-tablet-and-mobile-fixed-bg-color: #{get($footer-config, tablet-and-mobile, fixed, bg-color-dark)};
+    --#{$prefix}footer-tablet-and-mobile-fixed-box-shadow: #{get($footer-config, tablet-and-mobile, fixed, box-shadow-dark)};
+
+    // Aside
+    --#{$prefix}aside-bg-color: #{get($aside-config, bg-color-dark)};
+    --#{$prefix}aside-border: #{get($aside-config, border-dark)};
+    --#{$prefix}aside-box-shadow: #{get($aside-config, box-shadow-dark)};
+}

@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <link rel="icon" href="%PUBLIC_URL%/big-erp-favicon.jpg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#000000" />
+  <meta name="description" content="rkb110400000111040000" />
+  <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
+
+  <!--
+      manifest.json provides metadata used when your web app is installed on a
+      user's mobile device or desktop. See https://developers.google.com/web/fundamentals/web-app-manifest/
+    -->
+  <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+  <!--
+      Notice the use of %PUBLIC_URL% in the tags above.
+      It will be replaced with the URL of the `public` folder during the build.
+      Only files inside the `public` folder can be referenced from the HTML.
+
+      Unlike "/favicon.ico" or "favicon.ico", "%PUBLIC_URL%/favicon.ico" will
+      work correctly both with client-side routing and a non-root public URL.
+      Learn how to configure a non-root public URL by running `npm run build`.
+    -->
+  <title>Customers</title>
+  <style>
+    .ant-table-thead>tr>th,
+    .ant-table-tbody>tr>td,
+    .ant-table tfoot>tr>th,
+    .ant-table tfoot>tr>td {
+      position: relative;
+      padding: 8px 16px !important;
+      overflow-wrap: break-word;
+    }
+
+    .ant-popover-inner-content {
+      border-radius: 4px;
+      background: #ffffff73 !important;
+      box-shadow: 1px 2px 10px 4px #7a5a5a82 !important;
+    }
+
+    td:has(.parent_green) {
+      background-color: green !important;
+    }
+
+    td:has(.parent_yellow) {
+      background-color: yellow !important;
+    }
+
+    .inspection_background {
+      background-color: hsl(206, 92%, 53%);
+    }
+
+    .visit_background {
+      background-color: #e67cdd;
+    }
+
+    .insumo_background {
+      background-color: #ebc001;
+    }
+
+    .billing_report {
+      background-color: #c3c2bc;
+    }
+
+    .ant-table-measure-row {
+      display: none;
+    }
+
+    .ant-table {
+      line-height: 0.5715 !important
+    }
+
+    thead.ant-table-thead {
+      font-size: 13px;
+      font-family: "SF Regular", "Segoe System UI Regular", "Segoe UI Regular", sans-serif !important;
+    }
+
+    table td {
+      font-size: 12px;
+      font-family: "SF Regular", "Segoe System UI Regular", "Segoe UI Regular", sans-serif !important;
+    }
+
+    body p {
+      font-size: 12px;
+      font-family: "SF Regular", "Segoe System UI Regular", "Segoe UI Regular", sans-serif !important;
+    }
+
+    iframe {
+      display: none !important;
+    }
+
+    .ant-col.ant-form-item-label {
+      padding: 0px 0 0px !important;
+    }
+  </style>
+</head>
+
+<body>
+  <noscript>You need to enable JavaScript to run this app.</noscript>
+  <div id="root"></div>
+  <!--
+      This HTML file is a template.
+      If you open it directly in the browser, you will see an empty page.
+
+      You can add webfonts, meta tags, or analytics to this file.
+      The build step will place the bundled scripts into the <body> tag.
+
+      To begin the development, run `npm start` or `yarn start`.
+      To create a production bundle, use `npm run build` or `yarn build`.
+    -->
+</body>
+
+</html>
