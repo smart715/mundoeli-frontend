@@ -161,9 +161,15 @@ const request = {
       return errorHandler(error);
     }
   },
-  listById: async ({ entity, jsonData }) => {
+  listById: async ({ entity, jsonData, options = {} }) => {
     try {
-      const response = await axios.post(entity + '/byParentId', jsonData);
+      let query = '?';
+      for (var key in options) {
+        query += key + '=' + options[key] + '&';
+      }
+      query = query.slice(0, -1);
+
+      const response = await axios.post(entity + '/byParentId' + query, jsonData);
 
       successHandler(response, {
         notifyOnSuccess: false,

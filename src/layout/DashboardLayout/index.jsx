@@ -10,7 +10,6 @@ export default function DashboardLayout({ children }) {
       <Content
         style={{
           padding: '0px 40px',
-          height:'100vh'
           // width: '100%',
           // height: "500px !important ",
         }}
@@ -20,4 +19,3 @@ export default function DashboardLayout({ children }) {
     </Layout>
   );
 }
-  

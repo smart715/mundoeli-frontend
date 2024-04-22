@@ -268,7 +268,7 @@ const RecurrentBilling = (props) => {
     }
     return (
         <div className="whiteBox shadow">
-            <Modal title="Recurrent invoice" visible={isBankModal} onCancel={handleBankModal} footer={null} width={1000}>
+            <Modal title="Recurrent invoice" open={isBankModal} onCancel={handleBankModal} footer={null} width={1000}>
                 <Form
                     ref={RecurrentRef}
                     name="basic"

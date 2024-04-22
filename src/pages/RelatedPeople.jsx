@@ -142,7 +142,7 @@ const RelatedPeople = (props) => {
     return (
 
         <div className="whiteBox shadow">
-            <Modal title="Related People Form" visible={isBankModal} onCancel={handleBankModal} footer={null}>
+            <Modal title="Related People Form" open={isBankModal} onCancel={handleBankModal} footer={null}>
                 <Form
                     ref={formRef}
                     name="basic"

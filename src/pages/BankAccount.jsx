@@ -139,7 +139,7 @@ const BankAccount = (props) => {
     return (
 
         <div className="whiteBox shadow">
-            <Modal title="Bank Form" visible={isBankModal} onCancel={handleBankModal} footer={null}>
+            <Modal title="Bank Form" open={isBankModal} onCancel={handleBankModal} footer={null}>
                 <Form
                     ref={formRef}
                     name="basic"

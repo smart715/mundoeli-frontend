@@ -12,7 +12,6 @@ import CustomerReservation from './CustomerReservation';
 import CustomerPayment from './CustomerPayment';
 import moment from 'moment';
 import CustomerModal from './CustomerModal';
-import defaultAvatar from '@/style/demo-avatar.jpg'
 import { KTIcon } from '@/modules/Icons/KTIcon';
 import Item from 'antd/lib/list/Item';
 export default function Details() {
@@ -215,11 +214,11 @@ export default function Details() {
                       <div className='fw-bold fs-6 text-gray-500'>Pending</div>
                     </div>
                     {/* {console.log('%cfrontend\src\pages\CustomerDetails.jsx:216 object', 'color: #007acc;', currentItem?.notes)} */}
-                    {currentItem?.notes != undefined ? <div className='w-450px border border-gray-300 border-dashed rounded min-w-125px py-3 px-4 me-6 mb-3'>
+                    {currentItem?.notes !== undefined ? <div className='w-450px border border-gray-300 border-dashed rounded min-w-125px py-3 px-4 me-6 mb-3'>
                       <div className='fw-bold fs-6 text-gray-500'>{currentItem?.notes}</div>
                     </div> : null
                     }
-                    {currentItem?.notes != undefined ? <div className='w-250px border border-gray-300 border-dashed rounded min-w-125px py-3 px-4 me-6 mb-3'>
+                    {currentItem?.notes !== undefined ? <div className='w-250px border border-gray-300 border-dashed rounded min-w-125px py-3 px-4 me-6 mb-3'>
                       <div className='fw-bold fs-6 text-gray-500'>{currentItem?.address}</div>
                     </div> : null
                     }
@@ -233,7 +232,7 @@ export default function Details() {
       </div>
       <Tabs defaultActiveKey="1">
         <div tab="Reservations" key="1">
-          <Modal title="Create Form" visible={isModalVisible} onCancel={handleCancel} footer={null}>
+          <Modal title="Create Form" open={isModalVisible} onCancel={handleCancel} footer={null}>
             <div className="profile-card">
               <Upload
                 showUploadList={false}

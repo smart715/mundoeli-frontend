@@ -15,6 +15,7 @@ const ProductCategories = () => {
   const [isModalVisible, setIsModalVisible] = useState(false);
 
   const [isUpdate, setIsUpdate] = useState(false);
+  const { is_admin, is_primary_company, company_id } = useSelector((state) => state.auth);
   const showModal = () => {
 
     setCurrentId(new Date().valueOf())
@@ -33,6 +34,7 @@ const ProductCategories = () => {
   const [filterData, setFilterData] = useState([]);
   const [productLists, setProductLists] = useState([]);
   const [selectedTypeId, setSelectedTypeId] = useState()
+  const [isLoading, setIsLoading] = useState(true);
   const isEditing = (record) => record._id === editingKey;
   const editItem = (item) => {
     if (item) {
@@ -117,8 +119,11 @@ const ProductCategories = () => {
 
   useEffect(() => {
     (async () => {
-      const { result } = await request.list({ entity });
-      setProductLists(result);
+      const { result } = await request.listById({ entity });
+      let filter = result.filter((product) => (is_admin || company_id === product.product_type.company_name._id));
+      console.log("productLists", filter);
+      setProductLists(filter);
+      setIsLoading(false);
     })()
     document.title = "Product Lists"
   }, []);
@@ -152,7 +157,7 @@ const ProductCategories = () => {
           <Button onClick={showModal} type="primary">Create Product</Button>
         }
       ></PageHeader>
-      <Layout style={{ minHeight: '100vh' }}>
+      <Layout>
         <Layout>
           <Row gutter={24}>
             <Col span={4}>
@@ -178,6 +183,7 @@ const ProductCategories = () => {
               key={(item) => item._id}
               dataSource={filterData}
               columns={mergedColumns}
+              loading={isLoading}
               rowClassName="editable-row"
               pagination={{
                 total: filterData.length,

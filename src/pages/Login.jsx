@@ -123,7 +123,6 @@ const LoginPage = () => {
 
   const dispatch = useDispatch();
   const onFinish = (values) => {
-    // console.log(values, 'values')
     dispatch(login({ loginData: values }));
   };
 

@@ -1,8 +1,9 @@
+import { DashboardLayout } from "@/layout";
+import { Button, Form, Input, Layout, PageHeader } from "antd";
 import { request } from "@/request";
 import { CompanyPicker } from "./common";
 
 const { crud } = require("@/redux/crud/actions");
-const { Modal, Form, Input, Button } = require("antd");
 const { useForm } = require("antd/lib/form/Form");
 const { default: TextArea } = require("antd/lib/input/TextArea");
 const { useRef, useState, useEffect } = require("react");
@@ -21,9 +22,9 @@ const UserEdit = ({ }) => {
         values['company_id'] = values['company']?._id;
         const id = currentId;
         const { result: response } = await (request.update({ entity, id, jsonData: { ...values } }));
-        customerForm.resetFields();
+        // customerForm.resetFields();
 
-        history.push(`/admin`)
+        // history.push(`/user_edit`)
     };
     const handleCustomerModal = () => {
         customerForm.resetFields();
@@ -36,84 +37,94 @@ const UserEdit = ({ }) => {
         const { id: id } = JSON.parse(localStorage?.auth)
         setCurrentId(id)
         const userData = await (request.list({ entity }));
-        const filteredUser = userData.result.filter(user => {
-            return user._id == id
-        })
-        setUserData(filteredUser)
+        const findUser = userData.result.find(user => user._id == id)
+        console.log(findUser);
+        setUserData(findUser)
         customerForm.resetFields();
     }, [])
     return (
-        <div className="mt-6">
-            <Form
-                ref={formRef}
-                form={customerForm}
-                name="basic"
-                labelCol={{
-                    span: 4,
-                }}
-                wrapperCol={{
-                    span: 8,
-                }}
-                initialValues={{
-                    remember: true,
-                }}
-                onFinish={onFinish}
-                onFinishFailed={onFinishFailed}
-                autoComplete="off"
-            >
-                <Form.Item
-                    name="name"
-                    label="Name"
-                    rules={[
-                        {
-                            required: true,
-                            message: 'Please input your name!',
-                        },
-                    ]}
-                >
-                    <Input defaultValue={userData[0]?.name} />
-                </Form.Item>
 
-                <Form.Item
-                    name="password"
-                    label="Password"
-                    rules={[
-                        {
-                            required: true,
-                        },
-                    ]}
-                >
-                    <Input.Password autoComplete="new-password" />
+        <DashboardLayout>
+            <PageHeader title="User Edit" onBack={() => { window['history'].back() }}
+            ></PageHeader>
+            <Layout>
+                <div className="row">
+                    <div className="mt-6">
+                        <Form
+                            ref={formRef}
+                            form={customerForm}
+                            name="basic"
+                            labelCol={{
+                                span: 4,
+                            }}
+                            wrapperCol={{
+                                span: 8,
+                            }}
+                            initialValues={{
+                                name: userData?.name,
+                                company: userData?.company_id,
+                                remember: true,
+                            }}
+                            onFinish={onFinish}
+                            onFinishFailed={onFinishFailed}
+                            autoComplete="off"
+                        >
+                            <Form.Item
+                                name="name"
+                                label="Name"
+                                rules={[
+                                    {
+                                        required: true,
+                                        message: 'Please input your name!',
+                                    },
+                                ]}
+                            >
+                                <Input />
+                            </Form.Item>
 
-                </Form.Item>
-                <Form.Item
-                    name="company"
-                    label="Company"
-                    rules={[
-                        {
-                            required: true,
-                        },
-                    ]}
-                >
-                    <CompanyPicker />
-                </Form.Item>
-                <div style={{ display: 'flex', justifyContent: 'center', flexDirection: 'column', }}>
-                    <Form.Item
-                        wrapperCol={{
-                            offset: 6,
-                            span: 8,
-                        }}
-                    >
-                        <Button type="primary" htmlType="submit">
-                            Save
-                        </Button>
-                        <Button type="ghost" onClick={handleCustomerModal}>
-                            cancel
-                        </Button>
-                    </Form.Item>
+                            <Form.Item
+                                name="password"
+                                label="Password"
+                                rules={[
+                                    {
+                                        required: true,
+                                    },
+                                ]}
+                            >
+                                <Input.Password autoComplete="new-password" />
+
+                            </Form.Item>
+                            <Form.Item
+                                name="company"
+                                label="Company"
+                                rules={[
+                                    {
+                                        required: true,
+                                    },
+                                ]}
+                            >
+                                <CompanyPicker defaultVaule={userData?.company_id} />
+                            </Form.Item>
+                            <div style={{ display: 'flex', justifyContent: 'center', flexDirection: 'column', }}>
+                                <Form.Item
+                                    wrapperCol={{
+                                        offset: 6,
+                                        span: 8,
+                                    }}
+                                >
+                                    <Button type="primary" htmlType="submit">
+                                        Save
+                                    </Button>
+                                    <Button type="ghost" onClick={handleCustomerModal}>
+                                        cancel
+                                    </Button>
+                                </Form.Item>
+                            </div>
+                        </Form>
+                    </div>
                 </div>
-            </Form>
-        </div>
+            </Layout>
+        </DashboardLayout>
     );
 }
 export default UserEdit;

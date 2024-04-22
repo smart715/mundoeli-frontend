@@ -3,14 +3,14 @@ import { crud } from "@/redux/crud/actions";
 import { selectListsByCustomerContact, } from "@/redux/crud/selectors";
 import { request } from "@/request";
 import { CheckOutlined, CloseCircleOutlined, DeliveredProcedureOutlined, EditOutlined, FundViewOutlined, MinusCircleOutlined, PlusCircleOutlined, } from "@ant-design/icons";
-import { Button, Checkbox, Col, Dropdown, Form, Input, Modal, Pagination, Row, Select, Table, Upload, message } from "antd";
+import { Button, Checkbox, Col, Dropdown, Form, Input, Modal, Image, Row, Select, Table, Upload, message, notification } from "antd";
 import TextArea from "antd/lib/input/TextArea";
 import moment from "moment";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import EditReservationModal from "./EditReservationModal";
 import ProductCreationModal from "./ProductCreationModal";
-import { sendEmailWithCreation } from "./common";
+import { sendEmailWithCreation, priceFormat } from "./common";
 import PageLoader from '@/components/PageLoader';
 import history from "@/utils/history";
 
@@ -79,7 +79,7 @@ const CustomerReservation = ({ parentId: currentCustomerId, isClicked, onIsClick
         },
         {
             title: 'Total',
-            dataIndex: 'product_price',
+            dataIndex: 'total_amount',
             render: (price) => {
                 return (parseFloat(price) || 0).toFixed(2)
             }
@@ -94,7 +94,7 @@ const CustomerReservation = ({ parentId: currentCustomerId, isClicked, onIsClick
         {
             title: 'Pending',
             render: (_, obj) => {
-                return (parseFloat(obj?.product_price || 0) - parseFloat(obj?.paid_amount || 0)).toFixed(2)
+                return (parseFloat(obj?.total_amount || 0) - parseFloat(obj?.paid_amount || 0)).toFixed(2)
             }
         },
         {
@@ -112,7 +112,7 @@ const CustomerReservation = ({ parentId: currentCustomerId, isClicked, onIsClick
                 if (record?.status == -1) {
                     return <span className='badge badge-light-danger'>Cancelled</span>
                 } else if (record?.status === 2) {
-                    return <span className='badge badge-light-warning'>Delivered</span>
+                    return <span className='badge badge-light-primary'>Delivered</span>
                 }
                 else {
                     if ((status)) {
@@ -124,26 +124,26 @@ const CustomerReservation = ({ parentId: currentCustomerId, isClicked, onIsClick
                 }
             }
         },
-        {
-            title: 'Actions',
-            render: (_, record) => {
-                return (
-                    <>
-                        <Dropdown.Button menu={{ items: _items, onClick: (item) => handleMenuClick(item, record) }}>
-                            Action
-                        </Dropdown.Button>
-                    </>
-                )
+        // {
+        //     title: 'Actions',
+        //     render: (_, record) => {
+        //         return (
+        //             <>
+        //                 <Dropdown.Button menu={{ items: _items, onClick: (item) => handleMenuClick(item, record) }}>
+        //                     Action
+        //                 </Dropdown.Button>
+        //             </>
+        //         )
 
-            }
-        },
+        //     }
+        // },
     ];
     const logColumns = [
         {
             title: 'Date',
             dataIndex: 'created',
             render: (created) => {
-                return moment(new Date(created)).format('DD/MM/YY')
+                return moment(new Date(created)).format('DD/MM/YY HH:mm A')
             }
         },
         {
@@ -162,7 +162,7 @@ const CustomerReservation = ({ parentId: currentCustomerId, isClicked, onIsClick
     }
     const deliveredItem = (item) => {
         setDetectSaveData(!detectSaveData)
-        dispatch(crud.update({ entity, id: item?._id, jsonData: { status: 2 } }));
+        dispatch(crud.update({ entity, id: item?._id, jsonData: { status: 2, delivered_date: Date.now() } }));
         dispatch(crud.create({ entity: 'logHistory', jsonData: { log_id: item?._id, where_: `reserva`, description: "Delivered", user_id: currentUserId } }))
         setTimeout(() => {
             const jsonData = { parent_id: currentCustomerId }
@@ -175,7 +175,7 @@ const CustomerReservation = ({ parentId: currentCustomerId, isClicked, onIsClick
         if (currentId) {
             const id = currentId;
 
-            const jsonData = { status: -1 }
+            const jsonData = { status: -1, paid_amount: 0 }
             dispatch(crud.create({ entity: `logHistory`, jsonData: { description: cancelCommit, log_id: id, where_: "reserva", user_id: currentUserId } }))
             dispatch(crud.update({ entity, id, jsonData }));
 
@@ -195,7 +195,6 @@ const CustomerReservation = ({ parentId: currentCustomerId, isClicked, onIsClick
     const [selectedRecord, setSelectedRecord] = useState({});
 
     const [reserveStatus, setReserveStatus] = useState(false)
-    const [emailFooter, setEmailFooter] = useState('')
     const [detectSaveData, setDetectSaveData] = useState(false)
     useEffect(() => {
         if (isClicked) editForm();
@@ -235,6 +234,15 @@ const CustomerReservation = ({ parentId: currentCustomerId, isClicked, onIsClick
         setIsEditReserva(false)
     }
     const saveData = async (values) => {
+        if (imageUrl === null || imageUrl === '') {
+            notification.config({
+                duration: 2,
+            });
+            notification.error({
+                message: `Please upload an image`,
+            });
+            return;
+        }
         setReserveStatus(true)
         const parentId = currentCustomerId;
         const { reversations: reservations } = values;
@@ -242,7 +250,9 @@ const CustomerReservation = ({ parentId: currentCustomerId, isClicked, onIsClick
             obj.parent_id = parentId;
             obj.company_name = productType[0]?.company_name?._id;
             obj.user_id = currentUserId;
+            obj.method = values.method;
             obj.is_preventa = obj.is_preventa || false;
+            obj.total_amount = obj.product_price;
             return obj
         });
         const formData = new FormData();
@@ -272,6 +282,9 @@ const CustomerReservation = ({ parentId: currentCustomerId, isClicked, onIsClick
             setDetectSaveData(false)
             setIsEdit(false)
             setReserveStatus(false)
+            setImageUrl('');
+            setFileList([]);
+            form.resetFields();
         }, 500);
     }
     const onFinishFailed = (errorInfo) => {
@@ -307,8 +320,7 @@ const CustomerReservation = ({ parentId: currentCustomerId, isClicked, onIsClick
     const [totalPredienteAmount, setTotalPredienteAmount] = useState(0);
     const [isCancelModal, setIsCancelModal] = useState(false)
     const [isLogHistory, setIsLogHistory] = useState(false);
-    const [fileList, setFileList] = useState([
-    ]);
+    const [fileList, setFileList] = useState([]);
     const [productCategories, setProductCategories] = useState([]);
     const [originProductCategories, setOriginProductCategories] = useState([]);
     const [originProductTypes, setOriginProductTypes] = useState([]);
@@ -319,12 +331,24 @@ const CustomerReservation = ({ parentId: currentCustomerId, isClicked, onIsClick
     const [productObj, setProductObj] = useState(false);
     const [currentFile, setCurrentFile] = useState();
     const onChange = ({ fileList: newFileList }) => {
-        console.log(newFileList)
-        setCurrentFile(newFileList[0]?.originFileObj)
-        setFileList(newFileList);
+        const file = newFileList[0]?.originFileObj;
+
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const imageUrl = event.target.result; // This will contain the data URL
+                setCurrentFile(file);
+                setFileList(newFileList);
+                setImageUrl(imageUrl); // Set the data URL in state if needed
+            };
+            reader.readAsDataURL(file); // Read the file as a data URL
+        } else {
+            setCurrentFile(null);
+            setFileList([]);
+            setImageUrl(null);
+        }
     };
     const onPreview = async (file) => {
-        console.log(file, `1111`);
         let src = file.url;
         if (!src) {
             src = await new Promise((resolve) => {
@@ -360,15 +384,12 @@ const CustomerReservation = ({ parentId: currentCustomerId, isClicked, onIsClick
     }
     const [paymentHistories, setPaymentHistories] = useState([])
     const getPaymentHistories = async (item) => {
-        const { result } = await request.listById({ entity: 'paymentHistory', jsonData: { reserva_id: item?._id } });
+        const { result } = await request.listById({ entity: 'paymentHistory', jsonData: { 'reservation.reserva_id': item?._id } });
         setPaymentHistories(result || [])
     }
 
 
     useEffect(async () => {
-        const { result } = await request.list({ entity: 'systemInfo' });
-        setEmailFooter(result[0]?.email_footer)
-
         const id = currentCustomerId;
         const jsonData = { parent_id: id }
         dispatch(crud.listByCustomerContact({ entity, jsonData }));
@@ -393,17 +414,15 @@ const CustomerReservation = ({ parentId: currentCustomerId, isClicked, onIsClick
                 return obj;
             }
         })
-        console.log(productList, `productList`);
         setProductCategories(productList);
     }
     const handlePriceChange = (newValue, index) => {
         var formData = form.getFieldsValue();
         if (formData) {
-            formData['reversations'][index][`total_price`] = newValue;
-            formData['reversations'][index][`prediente`] = (newValue || 0) - (formData['reversations'][index][`paid_amount`] || 0);
+            formData['reversations'][index][`total_price`] = priceFormat(newValue);
+            formData['reversations'][index][`prediente`] = priceFormat((newValue || 0) - (formData['reversations'][index][`paid_amount`] || 0));
             const reversations = formData?.reversations;
 
-            console.log(reversations, '222');
             var total_paid_amount = 0, total_amount = 0, tota_prediente = 0;
             for (var i = 0; reversations && i < reversations.length; i++) {
                 var obj = reversations[i];
@@ -420,7 +439,7 @@ const CustomerReservation = ({ parentId: currentCustomerId, isClicked, onIsClick
     const handlePaidChange = (newValue, index) => {
         var formData = form.getFieldsValue();
         if (formData) {
-            formData['reversations'][index][`prediente`] = formData['reversations'][index][`product_price`] - newValue;
+            formData['reversations'][index][`prediente`] = priceFormat(formData['reversations'][index][`product_price`] - newValue);
 
             const reversations = formData[`reversations`];
             var total_paid_amount = 0, total_amount = 0, tota_prediente = 0;
@@ -492,7 +511,7 @@ const CustomerReservation = ({ parentId: currentCustomerId, isClicked, onIsClick
 
         <div className="whiteBox shadow">
 
-            <Modal title="New Reserva" visible={isEdit} onCancel={handleBankModal} footer={null} width={1000} >
+            <Modal title="New Reserva" open={isEdit} onCancel={handleBankModal} footer={null} width={1000} >
                 {
                     !reserveStatus ? <Form
                         className="ant-advanced-search-form"
@@ -513,7 +532,7 @@ const CustomerReservation = ({ parentId: currentCustomerId, isClicked, onIsClick
                         }}
                     >
                         <Row>
-                            <Col span={5}>
+                            <Col span={4}>
                                 <Form.Item
                                     name={'name'}
                                     label="Name"
@@ -529,7 +548,7 @@ const CustomerReservation = ({ parentId: currentCustomerId, isClicked, onIsClick
                             </Col>
                             <Col span={1}></Col>
 
-                            <Col span={5}>
+                            <Col span={4}>
                                 <Form.Item
                                     name={'email'}
                                     label="Email"
@@ -560,7 +579,7 @@ const CustomerReservation = ({ parentId: currentCustomerId, isClicked, onIsClick
                             </Col>
                             <Col span={1}></Col>
 
-                            <Col span={5}>
+                            <Col span={6}>
                                 <Form.Item
                                     name={'company_name'}
                                     label="Company Name"
@@ -577,13 +596,13 @@ const CustomerReservation = ({ parentId: currentCustomerId, isClicked, onIsClick
                         </Row>
                         <div className="opacity-25 bg-dark rounded h-1px w-100 mb-5 mt-5" style={{ "backgroundColor": "rgb(43 43 43)" }}></div>
                         <Row>
-                            <Col span={4}><span style={{ color: 'red' }}>*</span> Product Type</Col>
-                            <Col span={4}><span style={{ color: 'red' }}>*</span> Product</Col>
+                            <Col span={5}><span style={{ color: 'red' }}>*</span> Product Type</Col>
+                            <Col span={5}><span style={{ color: 'red' }}>*</span> Product</Col>
                             <Col span={3}><span style={{ color: 'red' }}>*</span>  Price</Col>
                             <Col span={3}>Preventa</Col>
-                            <Col span={3}>Notes</Col>
-                            <Col span={4}>Methods</Col>
-                            <Col span={3}>action</Col>
+                            <Col span={6}>Notes</Col>
+                            {/* <Col span={4}><span style={{ color: 'red' }}>*</span>Methods</Col> */}
+                            <Col span={2}>action</Col>
                             <Form.List name="reversations" initialValue={[{}]}>
                                 {(fields, { add, remove }) => (
                                     <>
@@ -597,17 +616,20 @@ const CustomerReservation = ({ parentId: currentCustomerId, isClicked, onIsClick
                                                                 required: true,
                                                             },
                                                         ]}
+                                                        wrapperCol={24}
                                                     >
 
                                                         <SelectAsync entity={'productTypes'} displayLabels={['product_name']} onChange={handleCompanyType} />
                                                     </Form.Item>
                                                 </Col>
+                                                <Col span={1}></Col>
                                                 <Col span={4}>
 
                                                     <Form.Item
 
                                                         {...restField}
                                                         name={[name, `product_name`]}
+                                                        wrapperCol={24}
                                                         rules={[
                                                             {
                                                                 required: true,
@@ -631,7 +653,7 @@ const CustomerReservation = ({ parentId: currentCustomerId, isClicked, onIsClick
                                                                 var formData = form.getFieldsValue();
                                                                 if (formData) {
                                                                     formData['reversations'][index][`payment_name`] = category_name;
-                                                                    formData['reversations'][index][`product_price`] = product_price;
+                                                                    formData['reversations'][index][`product_price`] = priceFormat(product_price);
                                                                     form.setFieldsValue(formData)
                                                                     handlePriceChange(product_price, index);
                                                                     handlePaidChange(formData['reversations'][index][`paid_amount`], index)
@@ -652,7 +674,8 @@ const CustomerReservation = ({ parentId: currentCustomerId, isClicked, onIsClick
 
                                                     </Form.Item>
                                                 </Col>
-                                                <Col span={3}>
+                                                <Col span={1}></Col>
+                                                <Col span={4}>
                                                     <Form.Item
 
                                                         {...restField}
@@ -680,7 +703,7 @@ const CustomerReservation = ({ parentId: currentCustomerId, isClicked, onIsClick
                                                         <Checkbox checked={checked} onChange={(e) => setChecked(e.target.checked)}>Yes</Checkbox>
                                                     </Form.Item>
                                                 </Col>
-                                                <Col span={3}>
+                                                <Col span={6}>
                                                     <Form.Item
                                                         {...restField}
                                                         name={[name, `notes`]}
@@ -688,25 +711,8 @@ const CustomerReservation = ({ parentId: currentCustomerId, isClicked, onIsClick
                                                         <Input />
                                                     </Form.Item>
                                                 </Col>
-                                                <Col span={4}>
-                                                    <Form.Item name={[name, `method`]} rules={[
-                                                        {
-                                                            required: true,
-                                                        },
-                                                    ]}>
-                                                        <Select
-                                                        >
-                                                            {[...paymentMethodLists].map((data) => {
-                                                                return (
-                                                                    <Select.Option
-                                                                        value={data?._id}
-                                                                    >{data?.method_name} </Select.Option>
-                                                                );
-                                                            })}
-                                                        </Select>
-                                                    </Form.Item>
-                                                </Col>
-                                                <Col span={3}>
+
+                                                <Col span={2}>
                                                     <Form.Item
 
                                                     >
@@ -771,7 +777,7 @@ const CustomerReservation = ({ parentId: currentCustomerId, isClicked, onIsClick
                                                                 }
                                                             ]}
                                                         >
-                                                            <Input />
+                                                            <Input prefix="$" type="number" step="0.01" />
                                                         </Form.Item>
                                                     </Col>
                                                     <Col span={6}>
@@ -798,7 +804,7 @@ const CustomerReservation = ({ parentId: currentCustomerId, isClicked, onIsClick
                                             ))}
                                         </Row>
                                         <Row style={{ width: `20%`, height: '100%' }}>
-                                            {imageUrl == '' ?
+                                            {imageUrl === '' ?
                                                 <Upload
                                                     width="100%" height='100%'
                                                     listType="picture-card"
@@ -808,7 +814,7 @@ const CustomerReservation = ({ parentId: currentCustomerId, isClicked, onIsClick
                                                 >
                                                     {fileList.length < 1 && '+ Upload'}
                                                 </Upload>
-                                                : <img src={imageUrl} onChange={onChange} onPaste={onChange} width="70%" height='100%' alt='' />}
+                                                : <Image src={imageUrl} onChange={onChange} onPaste={onChange} width="70%" height='100%' alt='' />}
                                         </Row>
                                     </>
                                 )}
@@ -829,39 +835,66 @@ const CustomerReservation = ({ parentId: currentCustomerId, isClicked, onIsClick
                             </Col>
                         </Row>
                         <div className="opacity-25 bg-dark rounded h-1px w-100 mb-5 mt-5" style={{ "backgroundColor": "rgb(43 43 43)" }}></div>
-                        <Form.Item
-                            wrapperCol={{
-                                offset: 8,
-                                span: 16,
-                            }}
-                        >
-                            {
-                                isUpdate ?
-                                    <Button type="primary" htmlType="submit">
-                                        Update
-                                    </Button>
-                                    : <Button type="primary" htmlType="submit">
-                                        Save
-                                    </Button>
+                        <Row>
+                            <Col span={4}><span style={{ color: 'red' }}>*</span>Methods</Col>
+                            <Col span={4}>
+                                <Form.Item name='method'
+                                    wrapperCol={24}
+                                    rules={[
+                                        {
+                                            required: true,
+                                        },
+                                    ]}>
+                                    <Select
+                                    >
+                                        {[...paymentMethodLists].map((data) => {
+                                            return (
+                                                <Select.Option
+                                                    value={data?._id}
+                                                >{data?.method_name} </Select.Option>
+                                            );
+                                        })}
+                                    </Select>
+                                </Form.Item>
+                            </Col>
+                            <Col span={10}></Col>
+                            <Col span={6}>
 
-                            }
+                                <Form.Item
+                                // wrapperCol={{
+                                //     offset: 8,
+                                //     span: 16,
+                                // }}
+                                >
+                                    {
+                                        isUpdate ?
+                                            <Button type="primary" htmlType="submit">
+                                                Update
+                                            </Button>
+                                            : <Button type="primary" htmlType="submit">
+                                                Save
+                                            </Button>
 
-                            <Button type="ghost" onClick={handleBankModal}>
-                                cancel
-                            </Button>
-                        </Form.Item>
+                                    }
+                                    &nbsp;
+                                    <Button type="ghost" onClick={handleBankModal}>
+                                        cancel
+                                    </Button>
+                                </Form.Item>
+                            </Col>
+                        </Row>
                     </Form> : <PageLoader />
                 }
 
             </Modal>
-            <Modal title={`Please input your comment before cancel.`} onOk={handleCancel} onCancel={() => setIsCancelModal(false)} visible={isCancelModal}>
+            <Modal title={`Please input your comment before cancel.`} onOk={handleCancel} onCancel={() => setIsCancelModal(false)} open={isCancelModal}>
                 <Form >
                     <Form.Item>
                         <TextArea onChange={(e) => setCancelCommit(e?.target?.innerHTML)} />
                     </Form.Item>
                 </Form>
             </Modal>
-            <Modal title={`Log History`} footer={null} onCancel={() => setIsLogHistory(false)} visible={isLogHistory}>
+            <Modal title={`Log History`} footer={null} onCancel={() => setIsLogHistory(false)} open={isLogHistory}>
                 <Table
                     bordered
                     rowKey={(item) => item._id}

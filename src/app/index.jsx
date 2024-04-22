@@ -14,16 +14,16 @@ import '../../src/_metronic/assets/keenicons/duotone/style.css'
 import '../../src/_metronic/assets/keenicons/outline/style.css'
 import '../../src/_metronic/assets/keenicons/solid/style.css'
 import '../../src/_metronic/assets/sass/style.scss'
-document.documentElement.setAttribute("data-bs-theme","light")
+document.documentElement.setAttribute("data-bs-theme", "light")
 
 function App() {
   const { isLoggedIn } = useSelector(selectAuth);
   if (!isLoggedIn) return <Router />;
   else {
     return (
-      <Layout style={{ minHeight: '100vh' }}>
+      <Layout>
         <Navigation />
-        <Layout style={{ minHeight: '100vh' }}>
+        <Layout>
           {/* <HeaderContent /> */}
           <Router isLoggedIn={true} />
         </Layout>

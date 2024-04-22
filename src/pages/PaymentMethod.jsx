@@ -3,6 +3,7 @@ import { DeleteOutlined, EditOutlined, SearchOutlined, } from '@ant-design/icons
 import { Button, Col, Form, Input, Layout, Modal, PageHeader, Popconfirm, Row, Table, Typography } from 'antd';
 import { convertFromRaw, EditorState } from "draft-js";
 import draftToHtml from "draftjs-to-html";
+import { convertFromHTML } from 'draft-convert';
 
 import React, { useEffect, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
@@ -42,11 +43,19 @@ const PaymentMethod = () => {
     const [currentItem, setCurrentItem] = useState({});
     const [filterData, setFilterData] = useState([]);
     const [userData, setUserData] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
     const isEditing = (record) => record._id === editingKey;
     const editItem = (item) => {
         if (item) {
             setTimeout(() => {
                 if (formRef.current) formRef.current.setFieldsValue(item);
+
+                const rawContentState = (item?.method_description);
+                if (rawContentState) {
+                    const contentState = convertFromHTML(rawContentState);
+                    const newEditorState = EditorState.createWithContent(contentState);
+                    setEditorState(newEditorState);
+                }
             }, 400);
             setCurrentId(item._id);
             setCurrentItem(item);
@@ -69,13 +78,18 @@ const PaymentMethod = () => {
             width: '15%',
         },
         {
-            title: 'Method Descritpion',
-            dataIndex: 'method_description',
+            title: 'Deduction',
+            dataIndex: 'deduction',
             width: '15%',
-            render: (text) => {
-                return <div dangerouslySetInnerHTML={{ __html: text }} />
-            }
         },
+        // {
+        //     title: 'Method Descritpion',
+        //     dataIndex: 'method_description',
+        //     width: '15%',
+        //     render: (text) => {
+        //         return <div dangerouslySetInnerHTML={{ __html: text }} style={{ whiteSpace: 'nowrap' }} />
+        //     }
+        // },
         {
             title: 'Created',
             dataIndex: 'created',
@@ -90,17 +104,18 @@ const PaymentMethod = () => {
             width: "10%",
             align: 'center',
             render: (_, record) => {
-                return (
-                    <>
-                        <Typography.Link onClick={() => editItem(record)}>
-                            <EditOutlined style={{ fontSize: "20px" }} />
-                        </Typography.Link>
+                if (!record.primary)
+                    return (
+                        <>
+                            <Typography.Link onClick={() => editItem(record)}>
+                                <EditOutlined style={{ fontSize: "20px" }} />
+                            </Typography.Link>
 
-                        <Popconfirm title="Sure to delete?" onConfirm={() => deleteItem(record)}>
-                            <DeleteOutlined style={{ fontSize: "20px" }} />
-                        </Popconfirm>
-                    </>
-                )
+                            <Popconfirm title="Sure to delete?" onConfirm={() => deleteItem(record)}>
+                                <DeleteOutlined style={{ fontSize: "20px" }} />
+                            </Popconfirm>
+                        </>
+                    )
             },
         },
 
@@ -129,6 +144,7 @@ const PaymentMethod = () => {
         ))
         if (result.length) {
             setFilterData(result)
+            setIsLoading(false);
             setUserData(result)
         }
 
@@ -147,7 +163,7 @@ const PaymentMethod = () => {
     };
     const onFinish = (values) => {
 
-        values.method_description = contentState
+        values.method_description = (contentState);
         if (isUpdate && currentId) {
             const id = currentId;
             dispatch(crud.update({ entity, id, jsonData: values }));
@@ -186,8 +202,8 @@ const PaymentMethod = () => {
                     <Button onClick={showModal} type="primary">Create Method</Button>
                 }
             ></PageHeader>
-            <Layout style={{ minHeight: '100vh' }}>
-                <Modal width="800px" title="Create Form" visible={isModalVisible} onOk={handleOk} onCancel={handleCancel} footer={null}>
+            <Layout>
+                <Modal width="800px" title="Create Form" open={isModalVisible} onOk={handleOk} onCancel={handleCancel} footer={null}>
                     <>
                         <Form
                             form={createForm}
@@ -218,6 +234,17 @@ const PaymentMethod = () => {
                                 <Input />
                             </Form.Item>
                             <Form.Item
+                                name="deduction"
+                                label="Deduction"
+                                rules={[
+                                    {
+                                        required: true,
+                                    },
+                                ]}
+                            >
+                                <Input type='number' prefix="%" />
+                            </Form.Item>
+                            <Form.Item
                                 name="method_description"
                                 label="Method Description"
                             >
@@ -229,7 +256,9 @@ const PaymentMethod = () => {
                                     onEditorStateChange={handleEditorStateChange}
                                     onContentStateChange={handleContentStateChange}
                                     spellCheck
-                                />;
+                                    wrapperStyle={{ border: '1px solid #d9d9d9' }}
+                                    editorStyle={{ minHeight: 200, maxHeight: 200, border: '1px solid #d9d9d9', margin: 12, borderWidth: 0.5, padding: 10, borderRadius: "2px", backgroundColor: '#d9d9d926' }}
+                                />
                             </Form.Item>
                             <Form.Item
                                 wrapperCol={{
@@ -271,6 +300,7 @@ const PaymentMethod = () => {
                         key={(item) => item._id}
                         dataSource={filterData}
                         columns={mergedColumns}
+                        loading={isLoading}
                         rowClassName="editable-row"
                         pagination={{
                             total: filterData.length,

@@ -43,7 +43,7 @@ export default function Delete({ config }) {
   return (
     <Modal
       title={modalTitle}
-      visible={deleteModal.isOpen}
+      open={deleteModal.isOpen}
       onOk={handleOk}
       onCancel={handleCancel}
       confirmLoading={isLoading}

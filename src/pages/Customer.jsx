@@ -9,14 +9,14 @@ import { Link } from 'react-router-dom/cjs/react-router-dom';
 import { request } from '@/request';
 import { useHistory } from 'react-router-dom/cjs/react-router-dom.min';
 import moment from 'moment';
-import { CompanyPicker } from "./common";
+// import { CompanyPicker } from "./common";
 const Customers = () => {
   const entity = "client"
   const searchFields = 'name,email';
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isUpdate, setIsUpdate] = useState(false);
   const [searchText, setSearchText] = useState('');
-  const [selectedCompany, setSelectedCompany] = useState();
+  // const [selectedCompany, setSelectedCompany] = useState();
   const { default: TextArea } = require("antd/lib/input/TextArea");
 
 
@@ -79,16 +79,25 @@ const Customers = () => {
       title: 'Name',
       dataIndex: 'name',
       width: '15%',
+      render: (text) => (
+        <div style={{ whiteSpace: 'nowrap' }}>{text}</div>
+      ),
     },
     {
       title: 'IG  user',
       dataIndex: 'iguser',
       width: '15%',
+      render: (text) => (
+        <div style={{ whiteSpace: 'nowrap' }}>{text}</div>
+      ),
     },
     {
       title: 'Email',
       dataIndex: 'email',
       width: '15%',
+      render: (text) => (
+        <div style={{ whiteSpace: 'nowrap' }}>{text}</div>
+      ),
     },
     {
       title: 'Phone',
@@ -138,14 +147,14 @@ const Customers = () => {
       }),
     };
   });
-  const { result: listResult } = useSelector(selectListItems);
+  const { result: listResult, isLoading: listIsLoading } = useSelector(selectListItems);
 
   const { pagination, items } = listResult;
   const [paginations, setPaginations] = useState(pagination)
 
 
   const onFinish = async (values) => {
-    values['company_id'] = values['company']?._id;
+    // values['company_id'] = values['company']?._id;
     if (isUpdate && currentId) {
       const id = currentId;
       dispatch(crud.update({ entity, id, jsonData: { ...values } }));
@@ -211,8 +220,8 @@ const Customers = () => {
           <Button onClick={showModal} type="primary">Create Customer</Button>
         }
       ></PageHeader>
-      <Layout style={{ minHeight: '100vh' }}>
-        <Modal title="Create Form" visible={isModalVisible} onOk={handleOk} onCancel={handleCancel} footer={null}>
+      <Layout>
+        <Modal title="Create Form" open={isModalVisible} onOk={handleOk} onCancel={handleCancel} footer={null}>
           <>
             <Form
               ref={formRef}
@@ -304,9 +313,9 @@ const Customers = () => {
                 name="address"
                 label="Address"
               >
-                <Input />
+                <TextArea />
               </Form.Item>
-              <Form.Item
+              {/* <Form.Item
                 name="company"
                 label="Company"
                 rules={[
@@ -316,7 +325,7 @@ const Customers = () => {
                 ]}
               >
                 <CompanyPicker onChange={setSelectedCompany} />
-              </Form.Item>
+              </Form.Item> */}
               <Form.Item
                 wrapperCol={{
                   offset: 8,
@@ -364,6 +373,7 @@ const Customers = () => {
               rowClassName="editable-row"
               // pagination={searchText ? paginations : pagination}
               onChange={handelDataTableLoad}
+              loading={listIsLoading}
               // footer={Footer}
               pagination={{
                 total: filterData.length,

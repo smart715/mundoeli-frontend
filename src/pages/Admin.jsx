@@ -55,10 +55,29 @@ const Admin = () => {
   const [userData, setUserData] = useState([]);
   const dispatch = useDispatch();
   const formRef = useRef(null);
-  const { onFetch, result, isLoading, isSuccess } = useOnFetch();
+  const { onFetch, result, isSuccess } = useOnFetch();
   const [paginations, setPaginations] = useState([])
-  const [selectedCompany, setSelectedCompany] = useState();
+  const [companyList, setCompanyList] = useState([]);
+  const [primaryCompanyID, setPrimaryCompanyID] = useState(null);
 
+  useEffect(() => {
+    (async () => {
+      const { result } = await request.listById({ entity: "companyList" });
+      setCompanyList(result || [])
+      const primaryCompany = result.find(company => company.primary);
+      if (primaryCompany) {
+        setPrimaryCompanyID(primaryCompany._id);
+      }
+    })()
+  },
+    []);
+  const validatePassword = (rule, value, callback) => {
+    if (value && value.length < 8) {
+      callback('Password must be at least 8 characters long');
+    } else {
+      callback();
+    }
+  };
   const entity = 'admin'
   const dataTableColumns = [
     { title: 'Full Name', dataIndex: 'name' },
@@ -87,9 +106,9 @@ const Admin = () => {
             <Popconfirm title="Sure to delete?" onConfirm={() => deleteItem(record)}>
               <DeleteOutlined style={{ fontSize: "20px" }} />
             </Popconfirm>
-            <Typography.Link onClick={() => updatePassword(record)}>
+            {/* <Typography.Link onClick={() => updatePassword(record)}>
               <RedoOutlined style={{ fontSize: "20px" }} />
-            </Typography.Link>
+            </Typography.Link> */}
           </>
         )
       },
@@ -111,7 +130,7 @@ const Admin = () => {
   };
   const onFinish = (values) => {
     if (!values['is_admin']) values['is_admin'] = false;
-    values['company_id'] = values['company']?._id;
+    values['company_id'] = values['company'];
     console.log('%cfrontend\src\pages\Admin.jsx:114 values', 'color: #007acc;', values);
     if (isUpdate && currentId) {
       const id = currentId;
@@ -135,7 +154,7 @@ const Admin = () => {
       }
     }, 400);
   }
-  const { result: listResult } = useSelector(selectListItems);
+  const { result: listResult, isLoading: listIsLoading } = useSelector(selectListItems);
 
   const { pagination, items } = listResult;
 
@@ -203,7 +222,7 @@ const Admin = () => {
         }
       ></PageHeader>
       <Layout>
-        <Modal title="Create Form" visible={isModalVisible} onCancel={handleCancel} footer={null} width={500}>
+        <Modal title="Create Form" open={isModalVisible} onCancel={handleCancel} footer={null} width={500}>
           <>
             <Form
               ref={formRef}
@@ -215,7 +234,7 @@ const Admin = () => {
                 span: 16,
               }}
               initialValues={{
-                remember: true,
+                company: primaryCompanyID
               }}
               onFinish={onFinish}
               onFinishFailed={onFinishFailed}
@@ -238,37 +257,33 @@ const Admin = () => {
                   </Form.Item>
 
 
-                  {!isUpdate
-                    &&
+                  <Form.Item
+                    name="email"
+                    label="Email"
+                    rules={[
+                      {
+                        required: true,
+                        type: 'email'
+                      },
+                    ]}
+                  >
+                    <Input readOnly={isUpdate && "true"} />
+                  </Form.Item>
 
-                    <Form.Item
-                      name="email"
-                      label="Email"
-                      rules={[
-                        {
-                          required: true,
-                          type: 'email'
-                        },
-                      ]}
-                    >
-                      <Input />
-                    </Form.Item>
-                  }
-                  {!isUpdate &&
-
-
-                    <Form.Item
-                      name="password"
-                      label="Password"
-                      rules={[
-                        {
-                          required: true,
-                        },
-                      ]}
-                    >
-                      <Input.Password autoComplete="new-password" />
-                    </Form.Item>
-                  }
+                  <Form.Item
+                    name="password"
+                    label="Password"
+                    rules={[
+                      {
+                        required: true,
+                      },
+                      {
+                        validator: validatePassword, // Using custom validator function
+                      },
+                    ]}
+                  >
+                    <Input.Password autoComplete="new-password" />
+                  </Form.Item>
                   <Form.Item
                     name={'is_admin'}
                     label={"Admin"}
@@ -286,7 +301,16 @@ const Admin = () => {
                       },
                     ]}
                   >
-                    <CompanyPicker onChange={setSelectedCompany} />
+                    <Select>
+                      {[...companyList].map((data) => {
+                        return (
+                          <Select.Option
+                            key={data?._id}
+                            value={data?._id}
+                          >{data?.company_name} </Select.Option>
+                        );
+                      })}
+                    </Select>
                   </Form.Item>
                 </Col>
               </Row>
@@ -329,6 +353,7 @@ const Admin = () => {
           bordered
           dataSource={filterData || []}
           columns={dataTableColumns}
+          loading={listIsLoading}
           rowClassName="editable-row"
           // pagination={paginations}
           pagination={{

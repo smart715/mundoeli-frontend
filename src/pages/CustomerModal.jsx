@@ -44,7 +44,7 @@ const CustomerModal = ({ setCustomerInfo, isEditWithReserva = false, isOpen, han
         if (!isUpdate) customerForm.resetFields();
     }, [customerInfo, customerForm, isOpen, isUpdate])
     return (
-        <Modal title={isUpdate ? "Update Form" : "Create Form"} visible={isOpen} onCancel={handleCustomerModal} footer={null}>
+        <Modal title={isUpdate ? "Update Form" : "Create Form"} open={isOpen} onCancel={handleCustomerModal} footer={null}>
             <>
                 <Form
                     ref={formRef}
@@ -126,7 +126,7 @@ const CustomerModal = ({ setCustomerInfo, isEditWithReserva = false, isOpen, han
                         name="address"
                         label="Address"
                     >
-                        <Input />
+                        <TextArea />
                     </Form.Item>}
                     <Form.Item
                         wrapperCol={{

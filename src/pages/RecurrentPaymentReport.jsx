@@ -874,7 +874,7 @@ const RecurrentPaymentReport = () => {
   return (
 
     <Layout style={{ padding: '100px', overflow: 'auto' }}>
-      <Modal title={selectedDate} visible={isModalVisible} onOk={handleOk} onCancel={handleCancel} footer={null}>
+      <Modal title={selectedDate} open={isModalVisible} onOk={handleOk} onCancel={handleCancel} footer={null}>
         <>
           <Form
             ref={formRef}
@@ -977,7 +977,7 @@ const RecurrentPaymentReport = () => {
 
     </Layout>
     // <DashboardLayout>
-    //   <Layout style={{ minHeight: '100vh' }}>
+    //   <Layout>
 
     //   </Layout>
     // </DashboardLayout>

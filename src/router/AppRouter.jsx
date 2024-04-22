@@ -5,6 +5,7 @@ import PrivateRoute from './PrivateRoute';
 import PublicRoute from './PublicRoute';
 import PageLoader from '@/components/PageLoader';
 import { routesConfig } from './RoutesConfig';
+import { useSelector } from 'react-redux';
 import history from '@/utils/history';
 import "react-draft-wysiwyg/dist/react-draft-wysiwyg.css";
 const Logout = lazy(() => import(/*webpackChunkName:'LogoutPage'*/ '@/pages/Logout'));
@@ -29,7 +30,8 @@ const SubMenuRouter = ({ subMenuRouter }) => {
 
 export default function AppRouter() {
   const location = useLocation();
-  const { isLoggedIn } = window.localStorage.getItem("auth") ? JSON.parse(window.localStorage.getItem("auth")) : { isLoggedIn: false };
+  const { isLoggedIn } = useSelector((state) => state.auth);
+  // const { isLoggedIn } = window.localStorage.getItem("auth") ? JSON.parse(window.localStorage.getItem("auth")) : { isLoggedIn: false };
   console.log(isLoggedIn, 'isLoginisLoginisLogin');
   if (!isLoggedIn) {
     window.location.href = window.location.origin
@@ -39,15 +41,15 @@ export default function AppRouter() {
       <AnimatePresence exitBeforeEnter initial={false}>
         <Switch location={location} key={location.pathname}>
           {routesConfig.map((routeItem) => {
-            return (
-              <PrivateRoute
-                key={routeItem.component}
-                path={`${routeItem.path}`}
-                exact={routeItem.exact || true}
-                component={lazy(() =>
-                  import(/* webpackChunkName: "[request]" */ `@/pages/${routeItem.component}`)
-                )}
-              />
+            return (<PrivateRoute
+              key={routeItem.component}
+              path={`${routeItem.path}`}
+              exact={routeItem.exact || true}
+              type={routeItem.type}
+              component={lazy(() =>
+                import(/* webpackChunkName: "[request]" */ `@/pages/${routeItem.component}`)
+              )}
+            />
             );
           })}
           <PublicRoute path="/login" render={() => <Redirect to="/" />} exact />

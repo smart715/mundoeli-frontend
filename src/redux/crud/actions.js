@@ -656,8 +656,8 @@ export const crud = {
         try {
           let res = await request.upload({ entity, jsonData });
           dispatch({
-            type: 'UPLOAD_AVATAR_SUCCESS',
-            payload: res.data,
+            type: actionTypes.REQUEST_SUCCESS,
+            payload: res.result,
           })
         } catch (error) {
           dispatch({

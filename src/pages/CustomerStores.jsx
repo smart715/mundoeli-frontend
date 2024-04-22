@@ -316,17 +316,17 @@ const CustomerStores = (props) => {
     return (
 
         <div className="whiteBox shadow">
-            <Modal title="Products" visible={isProducts} onCancel={handleProducts} footer={null}>
+            <Modal title="Products" open={isProducts} onCancel={handleProducts} footer={null}>
                 <h3>{products}</h3>
             </Modal>
-            <Modal title="Employees" visible={isModal} onCancel={cancelModal} footer={null} width={1000}>
+            <Modal title="Employees" open={isModal} onCancel={cancelModal} footer={null} width={1000}>
                 <Table
                     columns={employeeColumns}
                     dataSource={employeeDatas || []}
 
                 />
             </Modal>
-            <Modal title="Create Form" visible={isBankModal} onCancel={handleBankModal} footer={null} width={1000}>
+            <Modal title="Create Form" open={isBankModal} onCancel={handleBankModal} footer={null} width={1000}>
                 <Form
                     ref={formRef}
                     name="basic"

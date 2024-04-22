@@ -112,7 +112,7 @@ const CompanyList = () => {
           <>
             <Modal
               title='Admin Password'
-              visible={isModalVisibleDelete}
+              open={isModalVisibleDelete}
               onOk={handleOkDelete}
               onCancel={handleCancelDelete}
               footer={null}
@@ -233,8 +233,8 @@ const CompanyList = () => {
   return (
     <DashboardLayout>
       <PageHeader onBack={() => window.history.back()} title="Company" extra={<Button onClick={showModal} type="primary">Create</Button>}></PageHeader>
-      <Layout style={{ minHeight: '100vh' }}>
-        <Modal title="Create Form" visible={isModalVisible} onOk={handleOk} onCancel={handleCancel} footer={null}>
+      <Layout>
+        <Modal title="Create Form" open={isModalVisible} onOk={handleOk} onCancel={handleCancel} footer={null}>
           <>
             <Form
               ref={formRef}
@@ -294,6 +294,7 @@ const CompanyList = () => {
               key={(item) => item._id}
               dataSource={items}
               columns={mergedColumns}
+              loading={listIsLoading}
               rowClassName="editable-row"
               pagination={{
                 total: items.length,

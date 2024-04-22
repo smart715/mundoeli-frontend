@@ -315,8 +315,8 @@ const Employees = () => {
   return (
 
     <DashboardLayout>
-      <Layout style={{ minHeight: '100vh' }}>
-        <Modal title="Create Form" visible={isModalVisible} onOk={handleOk} onCancel={handleCancel} footer={null}>
+      <Layout>
+        <Modal title="Create Form" open={isModalVisible} onOk={handleOk} onCancel={handleCancel} footer={null}>
           <>
             <Form
               ref={formRef}
@@ -393,7 +393,7 @@ const Employees = () => {
           </>
         </Modal>
 
-        <Modal title="Customers" visible={isModal} onCancel={cancelModal} footer={null} width={1000}>
+        <Modal title="Customers" open={isModal} onCancel={cancelModal} footer={null} width={1000}>
           <Table
             columns={customerColumns}
             dataSource={customerData || []}

@@ -1002,7 +1002,7 @@ const AssignedEmployee = (props) => {
     return (
 
         <div className="whiteBox shadow">
-            <Modal title="Create Form" visible={isBankModal} onCancel={handleModal} footer={null} width={1000}>
+            <Modal title="Create Form" open={isBankModal} onCancel={handleModal} footer={null} width={1000}>
                 <Form
                     ref={formRef}
                     name="basic"
@@ -1471,7 +1471,7 @@ const AssignedEmployee = (props) => {
                 <>
                 </>
             </Modal >
-            <Modal title="Last day worked" visible={isWorkDate} footer={false}>
+            <Modal title="Last day worked" open={isWorkDate} footer={false}>
                 <Form onFinish={handleLastWork}>
 
                     <Form.Item

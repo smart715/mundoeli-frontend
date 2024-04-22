@@ -1,0 +1,12 @@
+// export const API_BASE_URL = `http://localhost:8888/api/`
+// export const DOWNLOAD_BASE_URL = `http://localhost:8888/download/`
+// export const ACCESS_TOKEN_NAME = 'x-auth-token';
+// export const UPLOAD_URL = 'http://localhost:8888/uploads/reservation/'
+// export const Avatar_url = 'http://localhost:8888/uploads/reservation/'
+// export const BASE_URL = 'http://localhost:8888';
+export const API_BASE_URL = `https://eli.mundoeli.com/api/`
+export const DOWNLOAD_BASE_URL = `https://eli.mundoeli.com/download/`
+export const ACCESS_TOKEN_NAME = 'x-auth-token';
+export const Avatar_url = 'https://eli.mundoeli.com/uploads/admin/'
+export const UPLOAD_URL = 'https://eli.mundoeli.com/uploads/reservation/'
+export const BASE_URL = 'https://eli.mundoeli.com'

@@ -273,7 +273,7 @@ export default function Details() {
     <DashboardLayout>
       <Tabs defaultActiveKey="1">
         <div tab="Details" key="1">
-          <Modal title="Create Form" visible={isModalVisible} onCancel={handleCancel} footer={null}>
+          <Modal title="Create Form" open={isModalVisible} onCancel={handleCancel} footer={null}>
             <div className="profile-card">
               <Upload
                 showUploadList={false}

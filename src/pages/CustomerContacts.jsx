@@ -169,7 +169,7 @@ const CustomerContacts = (props) => {
     return (
 
         <div className="whiteBox shadow">
-            <Modal title="Create Form" visible={isBankModal} onCancel={handleBankModal} footer={null}>
+            <Modal title="Create Form" open={isBankModal} onCancel={handleBankModal} footer={null}>
                 <Form
                     ref={formRef}
                     name="basic"

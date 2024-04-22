@@ -2,11 +2,17 @@ import SelectAsync from "@/components/SelectAsync";
 import { crud } from "@/redux/crud/actions";
 import { selectListsByCustomerContact, } from "@/redux/crud/selectors";
 import { request } from "@/request";
+import moment from "moment";
 import { CheckOutlined, CloseCircleOutlined, CloseSquareOutlined, EditOutlined, EyeOutlined, FolderViewOutlined, MinusCircleOutlined, PlusCircleOutlined, } from "@ant-design/icons";
-import { Button, Checkbox, Col, Dropdown, Form, Input, Modal, Row, Space, Table, Typography, Upload, message } from "antd";
+import { Button, Checkbox, Col, Image, Form, Input, Modal, Row, Space, Table, Typography, Upload, message } from "antd";
 import TextArea from "antd/lib/input/TextArea";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { dateFormat, dateTimeFormat, priceFormat } from "./common";
+import { useForm } from 'antd/lib/form/Form';
+import _ from 'lodash';
+import { UPLOAD_URL } from '@/config/serverApiConfig';
+
 const handleMenuClick = (e) => {
     message.info('Click on menu item.');
     console.log('click', e);
@@ -35,10 +41,39 @@ const menuProps = {
 const CustomerPayment = ({ parentId: currentCustomerId, isClicked, onIsClickNewReservaChange, customerInfo, setReversationInfo }) => {
     const { id: currentUserId } = JSON.parse(localStorage.auth)
 
-    const entity = 'customerReversation';
+    const entity = 'PaymentHistory';
     const dispatch = useDispatch();
 
     const [isEdit, setIsEdit] = useState(false);
+    const [paymentDetailTitle, setPaymentDetailTitle] = useState('');
+
+    const [currentId, setCurrentId] = useState('');
+    const [isUpdate, setIsUpdate] = useState(false);
+    const [parentInfo, setParentInfo] = useState({ name: 33 });
+    const [cancelCommit, setCancelCommit] = useState(``);
+    const [isLogHistory, setIsLogHistory] = useState(false);
+    const [paymentInfo, setPaymentInfo] = useState([])
+
+    const [reservations, setReservations] = useState([]);
+    const [imageUrl, setImageUrl] = useState(null);
+    const [paymentAmount, setPaymentAmount] = useState(0);
+    const [totalAmount, setTotalAmount] = useState(0);
+    const [pendingAmount, setPendingAmount] = useState(0);
+    const [isCheckout, setIsCheckout] = useState(false);
+    const [subTotalAmount, setSubTotalAmount] = useState(0);
+    const [taxAmount, setTaxAmount] = useState(0);
+    const [totalAmountWithTax, setTotalAmountWithTax] = useState(0)
+    const [cashAmount, setCashAmount] = useState(0)
+
+    const [paymentDetails, setPaymentDetails] = useState({
+        name: '',
+        phone: '',
+        payment_method: 'Cash',
+        date: ''
+    });
+    const [detailForm] = useForm();
+
+
     const formRef = useRef(null);
     const Columns = [
         {
@@ -52,18 +87,18 @@ const CustomerPayment = ({ parentId: currentCustomerId, isClicked, onIsClickNewR
                 return new Date(date).toLocaleDateString();
             }
         },
+        // {
+        //     title: 'Product',
+        //     dataIndex: ['product_name', `category_name`],
+        //     render: (product, obj) => {
+        //         return `${product} | $${obj?.paid_amount}`
+        //     }
+        // },
         {
-            title: 'Product',
-            dataIndex: ['product_name', `category_name`],
-            render: (product, obj) => {
-                return `${product} | $${obj?.paid_amount}`
-            }
-        },
-        {
-            title: 'Total',
-            dataIndex: 'product_price',
-            render: (product_price) => {
-                return `$${product_price}`
+            title: 'Paid Amount',
+            dataIndex: 'paid_amount',
+            render: (paid_amount) => {
+                return `$${priceFormat(paid_amount)}`
             }
         },
         {
@@ -88,13 +123,14 @@ const CustomerPayment = ({ parentId: currentCustomerId, isClicked, onIsClickNewR
                 return (
                     <>
                         {
-                            record?.payment_status == 1 ?
-                                <Typography.Link onClick={() => cancelItem(record)}>
-                                    <CloseCircleOutlined style={{ fontSize: "20px" }} />
-                                </Typography.Link> :
-                                <Typography.Link onClick={() => logViewItem(record)}>
-                                    <EyeOutlined style={{ fontSize: "20px" }} />
-                                </Typography.Link>
+                            // record?.payment_status == 1 ?
+                            //     <Typography.Link onClick={() => cancelItem(record)}>
+                            //         <CloseCircleOutlined style={{ fontSize: "20px" }} />
+                            //     </Typography.Link> :
+
+                            <Typography.Link onClick={() => viewPaymentDetails(record)}>
+                                <EyeOutlined style={{ fontSize: "20px" }} />
+                            </Typography.Link>
                         }
 
                     </>
@@ -126,12 +162,7 @@ const CustomerPayment = ({ parentId: currentCustomerId, isClicked, onIsClickNewR
         setIsCancelModal(true);
         setCurrentId(item?._id)
     }
-    const [currentId, setCurrentId] = useState('');
-    const [isUpdate, setIsUpdate] = useState(false);
-    const [parentInfo, setParentInfo] = useState({ name: 33 });
-    const [cancelCommit, setCancelCommit] = useState(``);
-    const [isLogHistory, setIsLogHistory] = useState(false);
-    const [paymentInfo, setPaymentInfo] = useState([])
+
     useEffect(() => {
         setParentInfo(customerInfo);
         return () => {
@@ -141,18 +172,18 @@ const CustomerPayment = ({ parentId: currentCustomerId, isClicked, onIsClickNewR
     const handleBankModal = () => {
         setIsEdit(false)
     }
-    const saveData = (values) => {
-        const parentId = currentCustomerId;
-        const { reversations } = values;
-        const reversationsWithParentId = reversations.map((obj) => {
-            obj.parent_id = parentId;
-            obj.user_id = currentUserId;
-            return obj
-        })
-        dispatch(crud.create({ entity, jsonData: reversationsWithParentId }));
-        dispatch(crud.listByCustomerContact({ entity, jsonData: { parent_id: parentId } }));
-        setIsEdit(false)
-    }
+    // const saveData = (values) => {
+    //     const parentId = currentCustomerId;
+    //     const { reversations } = values;
+    //     const reversationsWithParentId = reversations.map((obj) => {
+    //         obj.parent_id = parentId;
+    //         obj.user_id = currentUserId;
+    //         return obj
+    //     })
+    //     dispatch(crud.create({ entity, jsonData: reversationsWithParentId }));
+    //     dispatch(crud.listByCustomerContact({ entity, jsonData: { parent_id: parentId } }));
+    //     setIsEdit(false)
+    // }
     const onFinishFailed = (errorInfo) => {
         console.log('Failed:', errorInfo);
     };
@@ -165,8 +196,19 @@ const CustomerPayment = ({ parentId: currentCustomerId, isClicked, onIsClickNewR
 
     useEffect(() => {
         (async () => {
-            const { result, pagination } = await request.listById({ entity, jsonData: { parent_id: currentCustomerId } });
-            const paymentInfo = [...result.map((obj, index) => { return { ...obj, _payment_id: `P${index + 1}` } })]
+            const { result, pagination } = await request.listById({ entity, jsonData: { customer_id: currentCustomerId } });
+
+            let paymentInfo = [...result.map((obj, index) => {
+
+                return {
+                    ...obj,
+                    _payment_id: `P${index + 1}`,
+
+                    paid_amount: obj.checkout ? obj.order_price : _.sumBy(obj?.reservation, res => parseFloat(res.reserva_id.status !== -1 ? res?.amount : 0 || 0))
+                }
+
+            })]
+            paymentInfo = paymentInfo.filter(obj => obj.paid_amount > 0);
             setPaymentInfo(paymentInfo)
             setReversationInfo(paymentInfo);
             setPaginations(pagination)
@@ -188,7 +230,88 @@ const CustomerPayment = ({ parentId: currentCustomerId, isClicked, onIsClickNewR
     const [totalPredienteAmount, setTotalPredienteAmount] = useState(0);
     const [isCancelModal, setIsCancelModal] = useState(false)
     const [logHistories, setLogHistories] = useState([]);
+    const viewPaymentDetails = async (item) => {
+        console.log(item, 4);
+        setPaymentDetails({
+            name: item?.customer_id?.name,
+            phone: item?.customer_id?.phone,
+            payment_method: 'Cash',
+            status: item?.status,
+            date: dateFormat(item?.created)
+        });
+        setPaymentDetailTitle(`Payment | P${item?.payment_id} | ${item?.user_id?.name}`);
+        if (item?.checkout) {
+            setIsCheckout(true)
+            setPaymentAmount(0);
+            setTotalAmount(0);
+            setPendingAmount(0);
+            setSubTotalAmount(item?.sub_total);
+            setTaxAmount(item?.tax_price)
+            setTotalAmountWithTax(item?.order_price);
+            setCashAmount(item.cash_amount);
+            setPaymentDetails({
+                name: item?.customer_id?.name,
+                phone: item?.customer_id?.phone,
+                payment_method: item?.method_id?.method_name,
+                status: item?.status,
+                date: dateFormat(item?.created)
+            });
 
+            console.log("-item--", item);
+            let processedPayments = [].concat(...item.orders.map(order => {
+                return {
+                    companyName: order._id.product_type.company_name.company_name,
+                    date: moment(item.created).format('DD/MM/YY hh:mm:ss A'),
+                    productName: order._id.product_name,
+                    productPrice: order.product_price,
+                    productType: order._id.product_type.product_name,
+                    sourceId: 'P' + item.payment_id,
+                    customerName: item.customer_id?.name ? item.customer_id?.name : 'checkout',
+                    deduction: item.method_id?.method_name + "-$" + parseFloat(order.product_price * order.count * (item.method_id?.deduction ? item.method_id?.deduction : 0) / 100).toFixed(2),
+                    mPayment: '$' + parseFloat(item.order_price / item.sub_total * order.product_price * order.count).toFixed(2),
+                    count: order.count
+                };
+            }));
+            processedPayments = processedPayments.concat(...item.reservation.map(reserver => {
+                return {
+                    companyName: reserver.reserva_id.product_type.company_name.company_name,
+                    date: moment(reserver.reserva_id.delivered_date).format('DD/MM/YY hh:mm:ss A'),
+                    productName: reserver.reserva_id.product_name.category_name,
+                    productPrice: reserver.reserva_id.product_price,
+                    productType: reserver.reserva_id.product_type.product_name,
+                    sourceId: 'R' + reserver.reserva_id.reserva_id,
+                    customerName: item.customer_id?.name,
+                    deduction: reserver.reserva_id.method.method_name + "-$" + parseFloat(reserver.amount * (reserver.reserva_id.method.deduction ? reserver.reserva_id.method.deduction : 0) / 100).toFixed(2),
+                    mPayment: '$' + reserver.amount,
+                    count: -1
+                };
+            }));
+            console.log("-orderList--", processedPayments);
+            setReservations(processedPayments);
+        } else {
+            setIsCheckout(false)
+            setPaymentDetails({
+                name: item?.customer_id?.name,
+                phone: item?.customer_id?.phone,
+                payment_method: 'Cash',
+                status: item?.status,
+                date: dateFormat(item?.created)
+            });
+            const _total = _.sumBy(item?.reservation, obj => parseFloat(obj?.reserva_id?.product_name?.product_price));
+            const _payment = _.sumBy(item?.reservation, obj => parseFloat(obj?.amount));
+            const _pending = _total - _payment;
+            setPaymentAmount(_payment);
+            setTotalAmount(_total);
+            setPendingAmount(_pending);
+            setReservations(item?.reservation);
+        }
+        setImageUrl(item?.filename)
+        const currentId = item?._id;
+        const jsonData = { log_id: currentId, where_: "reserva" }
+        const { result: logData } = await request.listById({ entity: "logHistory", jsonData });
+        setLogHistories(logData)
+        setIsLogHistory(true)
+    }
     const [fileList, setFileList] = useState([
     ]);
     const onChange = ({ fileList: newFileList }) => {
@@ -223,14 +346,14 @@ const CustomerPayment = ({ parentId: currentCustomerId, isClicked, onIsClickNewR
             }, [500])
         }
     }
-    const logViewItem = async (item) => {
+    // const logViewItem = async (item) => {
 
-        const currentId = item?._id;
-        const jsonData = { log_id: currentId, where_: `payment` }
-        const { result: logData } = await request.listById({ entity: "logHistory", jsonData });
-        setLogHistories(logData)
-        setIsLogHistory(true)
-    }
+    //     const currentId = item?._id;
+    //     const jsonData = { log_id: currentId, where_: `payment` }
+    //     const { result: logData } = await request.listById({ entity: "logHistory", jsonData });
+    //     setLogHistories(logData)
+    //     setIsLogHistory(true)
+    // }
     const Footer = useCallback(() => {
         const pages = paginations
         const { current, count, total, page } = pages
@@ -249,7 +372,7 @@ const CustomerPayment = ({ parentId: currentCustomerId, isClicked, onIsClickNewR
     return (
 
         <div className="whiteBox shadow">
-            <Modal title="New Reserva" visible={isEdit} onCancel={handleBankModal} footer={null} width={1000}>
+            <Modal title="New Reserva" open={isEdit} onCancel={handleBankModal} footer={null} width={1000}>
                 <Form
                     className="ant-advanced-search-form"
                     form={form}
@@ -259,7 +382,7 @@ const CustomerPayment = ({ parentId: currentCustomerId, isClicked, onIsClickNewR
                     wrapperCol={{
                         span: 16,
                     }}
-                    onFinish={saveData}
+                    // onFinish={saveData}
                     onFinishFailed={onFinishFailed}
                     autoComplete="off"
                     initialValues={{
@@ -560,14 +683,171 @@ const CustomerPayment = ({ parentId: currentCustomerId, isClicked, onIsClickNewR
                 </Form>
 
             </Modal>
-            <Modal title={`Please input your comment before cancel.`} onOk={handleCancel} onCancel={() => setIsCancelModal(false)} visible={isCancelModal}>
+
+            <Modal title={<span>{paymentDetailTitle} &nbsp;
+                {paymentDetails?.status === -1 && <span className='badge badge-light-danger'>Cancelled</span>} </span>} footer={null} onCancel={() => setIsLogHistory(false)} open={isLogHistory} width={700}>
+                <Form layout="vertical" className='row bold-form' form={detailForm}>
+                    <div className="col-3">
+                        <Form.Item name={'name'} label="Name">
+                            <label>{paymentDetails?.name}</label>
+                        </Form.Item>
+                    </div>
+                    <div className="col-3">
+                        <Form.Item name={'phone'} label="Phone">
+                            <label>{paymentDetails?.phone}</label>
+                        </Form.Item>
+                    </div>
+                    <div className="col-3">
+                        <Form.Item name={'date'} label="Date">
+                            <label>{paymentDetails?.date}</label>
+                        </Form.Item>
+                    </div>
+                    <div className="col-3">
+                        <Form.Item name={'payment_method'} label="Payment Method">
+                            <label>{paymentDetails?.payment_method}</label>
+                        </Form.Item>
+                    </div>
+                </Form>
+                <h3>Payment Details</h3>
+                <div className="row">
+                    {!isCheckout &&
+                        <>
+                            <div className="w-75">
+                                {reservations && reservations.map((obj, index) =>
+                                (
+                                    <Form layout="vertical" className='row bold-form' form={detailForm}>
+                                        <div className="col-3">
+                                            <Form.Item name={'company'} label={!index && "Company"}>
+                                                <label>{obj?.reserva_id?.product_type?.company_name?.company_name}</label>
+                                            </Form.Item>
+                                        </div>
+                                        <div className="col-3">
+                                            <Form.Item name={'product'} label={!index && "Product"}>
+                                                <label>{obj?.reserva_id?.product_name?.category_name}</label>
+                                            </Form.Item>
+                                        </div>
+                                        <div className="col-2">
+                                            <Form.Item name={'payment'} label={!index && "Payment"}>
+                                                <label>${priceFormat(obj?.amount)}</label>
+                                            </Form.Item>
+                                        </div>
+                                        <div className="col-2">
+                                            <Form.Item name={'total'} label={!index && "Total"}>
+                                                <label>${priceFormat(obj?.reserva_id?.product_name?.product_price)}</label>
+                                            </Form.Item>
+                                        </div>
+                                        <div className="col-2">
+                                            <Form.Item name={'pending'} label={!index && "Pending"}>
+                                                <label>${priceFormat(parseFloat(obj?.reserva_id?.product_name?.product_price) - parseFloat(obj?.amount))}</label>
+                                            </Form.Item>
+                                        </div>
+                                    </Form>
+                                ))}
+                            </div>
+                            <div className="w-25">
+                                <Image src={`${UPLOAD_URL}reservation/${imageUrl}`} width="100%" height="100%" alt="Upload Image" />
+                            </div>
+                            <div className='w-75'>
+                                <Form layout="vertical" className='row' form={detailForm}>
+                                    <div className="col-6">
+                                        <Form.Item>
+                                            <label>Total Payment</label>
+                                        </Form.Item>
+                                    </div>
+                                    <div className="col-2">
+                                        <Form.Item>
+                                            <label className='text text-primary'>${priceFormat(paymentAmount)}</label>
+                                        </Form.Item>
+                                    </div>
+                                    <div className="col-2">
+                                        <Form.Item>
+                                            <label>${priceFormat(paymentAmount)}</label>
+                                        </Form.Item>
+                                    </div>
+                                    <div className="col-2">
+                                        <Form.Item>
+                                            <label>${priceFormat(paymentAmount)}</label>
+                                        </Form.Item>
+                                    </div>
+                                </Form>
+                            </div>
+                        </>
+                    }
+                    {isCheckout &&
+                        <>
+                            <div className="w-75">
+                                {reservations.map((obj, index) =>
+                                (
+                                    <Form layout="vertical" className='row bold-form' form={detailForm}>
+                                        <div className="col-3">
+                                            <Form.Item name={'company'} label={!index && "Company"}>
+                                                <label>{obj?.companyName}</label>
+                                            </Form.Item>
+                                        </div>
+                                        <div className="col-3">
+                                            <Form.Item name={'product'} label={!index && "Product"}>
+                                                <label>{obj?.productName}</label>
+                                            </Form.Item>
+                                        </div>
+                                        <div className="col-3">
+                                            <Form.Item name={'price'} label={!index && "Price"}>
+                                                <label>${priceFormat(obj?.productPrice)}</label>
+                                            </Form.Item>
+                                        </div>
+                                        <div className="col-3">
+                                            <Form.Item name={'count'} label={!index && "count"}>
+                                                <label>
+                                                    {obj?.count !== -1 ? obj?.count : <span className='badge badge-light-danger'>Pending</span>}
+
+                                                </label>
+                                            </Form.Item>
+                                        </div>
+                                    </Form>
+                                ))}
+                            </div>
+                            <div className="w-25">
+                                <Form layout="horizontal" className='row'>
+                                    <div className="col-12">
+                                        <Form.Item className="my-0" name={'sub_total'} label={"Sub Total"}>
+                                            <label className='text text-primary'>${priceFormat(subTotalAmount)}</label>
+                                        </Form.Item>
+                                    </div>
+                                    <div className="col-12">
+                                        <Form.Item className="my-0" name={'taxs'} label={"Taxes"}>
+                                            <label className='text text-info'>${priceFormat(taxAmount)}</label>
+                                        </Form.Item>
+                                    </div>
+                                    <div className="col-12">
+                                        <Form.Item className="my-0" name={'total'} label={"Total"}>
+                                            <label className='text text-success'>${priceFormat(totalAmountWithTax)}</label>
+                                        </Form.Item>
+                                    </div>
+                                    {
+                                        paymentDetails.payment_method.toLowerCase() === 'cash' &&
+                                        <div className="col-12">
+                                            <Form.Item className="my-0" name={'cash_amount'} label={"Payment"}>
+                                                <label className='text text-nomarl'>${priceFormat(cashAmount)}</label>
+                                            </Form.Item>
+                                            <Form.Item className="my-0" name={'exchange'} label={"Exchange"}>
+                                                <label className='text text-nomarl'>${priceFormat(cashAmount - totalAmountWithTax)}</label>
+                                            </Form.Item>
+                                        </div>
+                                    }
+                                </Form>
+                            </div>
+                        </>
+                    }
+                </div>
+
+            </Modal>
+            <Modal title={`Please input your comment before cancel.`} onOk={handleCancel} onCancel={() => setIsCancelModal(false)} open={isCancelModal}>
                 <Form>
                     <Form.Item>
                         <TextArea onChange={(e) => setCancelCommit(e?.target?.innerHTML)} />
                     </Form.Item>
                 </Form>
             </Modal>
-            <Modal title={`Log History`} onCancel={() => setIsLogHistory(false)} visible={isLogHistory}>
+            {/* <Modal title={`Log History`} onCancel={() => setIsLogHistory(false)} open={isLogHistory}>
                 <Table
                     bordered
                     rowKey={(item) => item._id}
@@ -576,7 +856,7 @@ const CustomerPayment = ({ parentId: currentCustomerId, isClicked, onIsClickNewR
                     columns={logColumns}
                     rowClassName="editable-row"
                 />
-            </Modal>
+            </Modal> */}
             <Table
                 bordered
                 rowKey={(item) => item._id}

@@ -1393,7 +1393,7 @@ const PayrollDetails = () => {
   return (
 
     <Layout style={{ padding: '30px', overflow: 'auto' }}>
-      <Modal title={selectedDate} visible={isModalVisible} onOk={handleOk} onCancel={handleCancel} footer={null}>
+      <Modal title={selectedDate} open={isModalVisible} onOk={handleOk} onCancel={handleCancel} footer={null}>
         <>
           <Form
             ref={formRef}
@@ -1464,7 +1464,7 @@ const PayrollDetails = () => {
           </Form>
         </>
       </Modal>
-      <Modal title="Change History" visible={isChangeHistory} onCancel={handleCancelHistory} footer={null} width={700}>
+      <Modal title="Change History" open={isChangeHistory} onCancel={handleCancelHistory} footer={null} width={700}>
         <Table
           columns={[
             {
@@ -1489,7 +1489,7 @@ const PayrollDetails = () => {
           dataSource={historyData || []}
         />
       </Modal>
-      <Modal title="Replacement" visible={isReplacement} footer={null} onCancel={handleCancelReplacement} width={1300}>
+      <Modal title="Replacement" open={isReplacement} footer={null} onCancel={handleCancelReplacement} width={1300}>
         <Form
           ref={replaceRef}
           onFinish={handleReplacement}

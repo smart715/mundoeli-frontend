@@ -62,7 +62,7 @@ export default function CrudLayout({
   return (
     <>
       <DefaultLayout>
-        <Layout style={{ minHeight: '100vh' }}>
+        <Layout>
           <SidePanel
             config={config}
             topContent={sidePanelTopContent}

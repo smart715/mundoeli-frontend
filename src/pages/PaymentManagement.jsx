@@ -1,7 +1,7 @@
 /* eslint-disable jsx-a11y/img-redundant-alt */
 import { DashboardLayout, } from '@/layout';
 import { CloseCircleOutlined, CloseOutlined, DeliveredProcedureOutlined, EditOutlined, EyeOutlined, FolderViewOutlined, } from '@ant-design/icons';
-import { Button, Col, DatePicker, Form, Input, Layout, Modal, PageHeader, Popconfirm, Row, Select, Statistic, Table, Tag, Typography, Upload, message } from 'antd';
+import { Button, Col, DatePicker, Form, Input, Layout, Modal, PageHeader, Popconfirm, Row, Select, Statistic, Table, Tag, Typography, Upload, Image } from 'antd';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { crud } from '@/redux/crud/actions';
@@ -21,6 +21,7 @@ const entity = "paymentHistory"
 
 const PaymentManagement = () => {
   const searchFields = 'name,email';
+  const [isLoading, setIsLoading] = useState(true);
   const [status, setStatus] = useState();
   const [isPayment, setIsPayment] = useState(false);
   const [searchText, setSearchText] = useState('');
@@ -30,12 +31,13 @@ const PaymentManagement = () => {
   const finishCancel = () => {
     if (currentId) {
       const id = currentId;
-      const jsonData = { status: -1 }
+      const jsonData = { status: -1, cancel_commit: cancelCommit }
       dispatch(crud.update({ entity, id, jsonData }));
       setTimeout(() => {
         dispatch(crud.list({ entity }))
       }, [500]);
       setIsCancelModal(false)
+      history.push('/payments')
     }
   }
   const handelDataTableLoad = useCallback((pagination) => {
@@ -90,7 +92,7 @@ const PaymentManagement = () => {
     },
     {
       title: 'Total',
-      dataIndex: `amount`,
+      dataIndex: `total_amount`,
       width: '15%',
       render: (data) => {
         return priceFormat(data)
@@ -122,7 +124,7 @@ const PaymentManagement = () => {
             </Typography.Link>
             {console.log('%cfrontend\src\pages\PaymentManagement.jsx:121 record', 'color: #007acc;', is_admin)}
 
-            {(is_admin == true || company_id == record?.user_id?.company_id) ?
+            {(is_admin == true || company_id == record?.user_id?.company_id) && record.status === 1 ?
               <Popconfirm title="Sure to Cancelled?" onConfirm={() => cancelPayment(record)}>
                 <CloseOutlined style={{ fontSize: "15px" }} />
               </Popconfirm> : null
@@ -152,10 +154,10 @@ const PaymentManagement = () => {
       }),
     };
   });
-  const { result: Items } = useSelector(selectListItems);
-
+  const { result: Items, isLoading: listIsLoading } = useSelector(selectListItems);
   const { pagination, items } = Items;
   const [paginations, setPaginations] = useState(pagination)
+  const [initItems, setInitItems] = useState([]);
   useEffect(() => {
 
     dispatch(crud.resetState());
@@ -164,23 +166,37 @@ const PaymentManagement = () => {
   }, [dispatch]);
 
   useEffect(() => {
-
-    (async () => {
-      const { result } = await request.list({ entity: `logHistory` });
-      for (var i = 0; i < items.length; i++) {
-        const sum = _.sumBy(items[i]?.reservation, obj => parseInt(obj.amount));
-        items[i]['amount'] = sum || items[i]['order_price'];
-        for (var j = 0; j < result.length; j++) {
-          if (items[i].status === -1 && items[i]._id === result[j].log_id) {
-            items[i][`notes`] = result[j][`description`];
+    const fetchData = async () => {
+      try {
+        setIsLoading(true);
+        const { result: items, pagination } = await request.list({ entity });
+        setInitItems(items);
+        setPaginations(pagination);
+        const { result } = await request.list({ entity: `logHistory` });
+        console.log("items", items);
+        for (var i = 0; i < items.length; i++) {
+          const sum = _.sumBy(items[i]?.reservation, obj => parseFloat(obj.reserva_id.status !== -1 ? obj.amount : 0 || 0));
+          const sum_order = _.sumBy(items[i]?.orders, obj => parseFloat(obj.product_price * obj.count));
+          items[i]['total_amount'] = sum + sum_order + items[i].tax_price;
+          for (var j = 0; j < result.length; j++) {
+            if (items[i].status === -1 && items[i]._id === result[j].log_id) {
+              items[i][`notes`] = result[j][`description`];
+            }
           }
         }
+        const filtered_items = items.filter(obj => obj.total_amount > 0);
+        setFilterData(filtered_items);
+        setDataSource(filtered_items);
+      } catch (error) {
+        // Handle error state
+      } finally {
+        setIsLoading(false);
       }
-      setFilterData(items)
-      setDataSource(items);
+    };
 
-    })()
-  }, [items])
+    fetchData();
+    document.title = "Payments";
+  }, []);
   useEffect(() => {
 
     if (periods) {
@@ -230,7 +246,7 @@ const PaymentManagement = () => {
     payment_method: 'Cash',
     date: ''
   });
-  const [reservations, serReservations] = useState([]);
+  const [reservations, setReservations] = useState([]);
   const [imageUrl, setImageUrl] = useState(null);
   const [paymentAmount, setPaymentAmount] = useState(0);
   const [totalAmount, setTotalAmount] = useState(0);
@@ -239,12 +255,16 @@ const PaymentManagement = () => {
   const [subTotalAmount, setSubTotalAmount] = useState(0);
   const [taxAmount, setTaxAmount] = useState(0);
   const [totalAmountWithTax, setTotalAmountWithTax] = useState(0)
+  const [cashAmount, setCashAmount] = useState(0)
+  const [selectedPayment, setSelectedPayment] = useState()
   const viewPaymentDetails = async (item) => {
+    setSelectedPayment(item);
     console.log(item, 4);
     setPaymentDetails({
       name: item?.customer_id?.name,
       phone: item?.customer_id?.phone,
       payment_method: 'Cash',
+      status: item?.status,
       date: dateFormat(item?.created)
     });
     setPaymentDetailTitle(`Payment | P${item?.payment_id} | ${item?.user_id?.name}`);
@@ -256,19 +276,53 @@ const PaymentManagement = () => {
       setSubTotalAmount(item?.sub_total);
       setTaxAmount(item?.tax_price)
       setTotalAmountWithTax(item?.order_price);
+      setCashAmount(item?.cash_amount);
       setPaymentDetails({
-        name: item?.user_id?.name,
+        name: item?.customer_id?.name,
         phone: item?.customer_id?.phone,
         payment_method: item?.method_id?.method_name,
+        status: item?.status,
         date: dateFormat(item?.created)
       });
-      serReservations(item?.orders);
+
+      console.log("-item--", item);
+      let processedPayments = [].concat(...item.orders.map(order => {
+        return {
+          companyName: order._id.product_type.company_name.company_name,
+          date: moment(item.created).format('DD/MM/YY hh:mm:ss A'),
+          productName: order._id.product_name,
+          productPrice: order.product_price,
+          productType: order._id.product_type.product_name,
+          sourceId: 'P' + item.payment_id,
+          customerName: item.customer_id?.name ? item.customer_id?.name : 'checkout',
+          deduction: item.method_id?.method_name + "-$" + parseFloat(order._id.product_price * order.count * (item.method_id?.deduction ? item.method_id?.deduction : 0) / 100).toFixed(2),
+          mPayment: '$' + parseFloat(item.order_price / item.sub_total * order._id.product_price * order.count).toFixed(2),
+          count: order.count
+        };
+      }));
+      processedPayments = processedPayments.concat(...item.reservation.map(reserver => {
+        return {
+          companyName: reserver.reserva_id?.product_type?.company_name.company_name,
+          date: moment(reserver.reserva_id?.delivered_date).format('DD/MM/YY hh:mm:ss A'),
+          productName: reserver.reserva_id?.product_name.category_name,
+          productPrice: reserver.amount,
+          productType: reserver.reserva_id?.product_type.product_name,
+          sourceId: 'R' + reserver.reserva_id?.reserva_id,
+          customerName: item.customer_id?.name,
+          deduction: reserver.reserva_id?.method.method_name + "-$" + parseFloat(reserver.amount * (reserver.reserva_id?.method.deduction ? reserver.reserva_id?.method.deduction : 0) / 100).toFixed(2),
+          mPayment: '$' + reserver.amount,
+          count: -1
+        };
+      }));
+      console.log("-orderList--", processedPayments);
+      setReservations(processedPayments);
     } else {
       setIsCheckout(false)
       setPaymentDetails({
         name: item?.customer_id?.name,
         phone: item?.customer_id?.phone,
         payment_method: 'Cash',
+        status: item?.status,
         date: dateFormat(item?.created)
       });
       const _total = _.sumBy(item?.reservation, obj => parseFloat(obj?.reserva_id?.product_name?.product_price));
@@ -277,7 +331,7 @@ const PaymentManagement = () => {
       setPaymentAmount(_payment);
       setTotalAmount(_total);
       setPendingAmount(_pending);
-      serReservations(item?.reservation);
+      setReservations(item?.reservation);
     }
     setImageUrl(item?.filename)
     const currentId = item?._id;
@@ -294,6 +348,7 @@ const PaymentManagement = () => {
     if (periods) setPeriods(periods);
     else setFilterData(dataSource)
   }
+
   return (
     <DashboardLayout>
       <PageHeader title="Payments" onBack={() => { window['history'].back() }}
@@ -301,10 +356,10 @@ const PaymentManagement = () => {
           <Button type='primary' onClick={() => history.push('/checkout')} >New sale</Button>
         }
       ></PageHeader>
-      <Layout style={{ minHeight: '100vh' }}>
+      <Layout>
         <Layout>
           <Row gutter={24} style={{ textAlign: 'right' }}>
-            <DatePicker.RangePicker onCalendarChange={(value) => changePeriods(value)} />
+            <DatePicker.RangePicker onCalendarChange={(value) => changePeriods(value)} defaultValue={[moment().subtract(7, 'days'), moment()]} />
           </Row>
           <Form form={form} component={false}>
             <Table
@@ -316,6 +371,7 @@ const PaymentManagement = () => {
               rowClassName="editable-row"
               // pagination={searchText ? paginations : pagination}
               onChange={handelDataTableLoad}
+              loading={isLoading}
               pagination={{
                 total: filterData.length,
                 showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} items`,
@@ -324,8 +380,9 @@ const PaymentManagement = () => {
             // footer={Footer}
             />
           </Form>
-          <Modal title={paymentDetailTitle} footer={null} onCancel={() => setIsLogHistory(false)} visible={isLogHistory} width={700}>
-            <Form layout="vertical" className='row' form={detailForm}>
+          <Modal title={<span>{paymentDetailTitle} &nbsp;
+            {paymentDetails?.status === -1 && <span className='badge badge-light-danger'>Cancelled</span>} </span>} footer={null} onCancel={() => setIsLogHistory(false)} open={isLogHistory} width={700}>
+            <Form layout="vertical" className='row bold-form' form={detailForm}>
               <div className="col-3">
                 <Form.Item name={'name'} label="Name">
                   <label>{paymentDetails?.name}</label>
@@ -354,7 +411,7 @@ const PaymentManagement = () => {
                   <div className="w-75">
                     {reservations.map((obj, index) =>
                     (
-                      <Form layout="vertical" className='row' form={detailForm}>
+                      <Form layout="vertical" className='row bold-form' form={detailForm}>
                         <div className="col-3">
                           <Form.Item name={'company'} label={!index && "Company"}>
                             <label>{obj?.reserva_id?.product_type?.company_name?.company_name}</label>
@@ -384,7 +441,8 @@ const PaymentManagement = () => {
                     ))}
                   </div>
                   <div className="w-25">
-                    <img src={`${UPLOAD_URL}${imageUrl}`} width="100%" height="100%" alt="Upload Image" />
+                    {imageUrl &&
+                      <Image src={`${UPLOAD_URL}reservation/${imageUrl}`} width="100%" height="100%" alt="Upload Image" />}
                   </div>
                   <div className='w-75'>
                     <Form layout="vertical" className='row' form={detailForm}>
@@ -410,6 +468,8 @@ const PaymentManagement = () => {
                       </div>
                     </Form>
                   </div>
+                  <div>
+                  </div>
                 </>
               }
               {isCheckout &&
@@ -417,25 +477,28 @@ const PaymentManagement = () => {
                   <div className="w-75">
                     {reservations.map((obj, index) =>
                     (
-                      <Form layout="vertical" className='row' form={detailForm}>
+                      <Form layout="vertical" className='row bold-form' form={detailForm}>
                         <div className="col-3">
                           <Form.Item name={'company'} label={!index && "Company"}>
-                            <label>{obj?._id?.product_type?.company_name?.company_name}</label>
+                            <label>{obj?.companyName}</label>
                           </Form.Item>
                         </div>
                         <div className="col-3">
                           <Form.Item name={'product'} label={!index && "Product"}>
-                            <label>{obj?._id?.product_name}</label>
+                            <label>{obj?.productName}</label>
                           </Form.Item>
                         </div>
                         <div className="col-3">
                           <Form.Item name={'price'} label={!index && "Price"}>
-                            <label>${priceFormat(obj?._id?.product_price)}</label>
+                            <label>${priceFormat(obj?.productPrice)}</label>
                           </Form.Item>
                         </div>
                         <div className="col-3">
                           <Form.Item name={'count'} label={!index && "count"}>
-                            <label>{obj?.count}</label>
+                            <label>
+                              {obj?.count !== -1 ? obj?.count : <span className='badge badge-light-danger'>Pending</span>}
+
+                            </label>
                           </Form.Item>
                         </div>
                       </Form>
@@ -444,28 +507,50 @@ const PaymentManagement = () => {
                   <div className="w-25">
                     <Form layout="horizontal" className='row'>
                       <div className="col-12">
-                        <Form.Item name={'sub_total'} label={"Sub Total"}>
+                        <Form.Item className="my-0" name={'sub_total'} label={"Sub Total"}>
                           <label className='text text-primary'>${priceFormat(subTotalAmount)}</label>
                         </Form.Item>
                       </div>
                       <div className="col-12">
-                        <Form.Item name={'taxs'} label={"Taxes"}>
+                        <Form.Item className="my-0" name={'taxs'} label={"Taxes"}>
                           <label className='text text-info'>${priceFormat(taxAmount)}</label>
                         </Form.Item>
                       </div>
                       <div className="col-12">
-                        <Form.Item name={'total'} label={"Total"}>
+                        <Form.Item className="my-0" name={'total'} label={"Total"}>
                           <label className='text text-success'>${priceFormat(totalAmountWithTax)}</label>
                         </Form.Item>
                       </div>
+                      {
+                        paymentDetails?.payment_method?.toLowerCase() === 'cash' &&
+                        <div className="col-12">
+                          <Form.Item className="my-0" name={'cash_amount'} label={"Payment"}>
+                            <label className='text text-nomarl'>${priceFormat(cashAmount)}</label>
+                          </Form.Item>
+                          <Form.Item className="my-0" name={'exchange'} label={"Exchange"}>
+                            <label className='text text-nomarl'>${priceFormat(cashAmount - totalAmountWithTax)}</label>
+                          </Form.Item>
+                        </div>
+                      }
                     </Form>
                   </div>
                 </>
               }
             </div>
+            {
+              selectedPayment?.status === -1 &&
+              <div className="row">
+                <div className="col-2">
+                  <h5>Commit : </h5>
+                </div>
+                <div className="col-10">
+                  <label>{selectedPayment?.cancel_commit}</label>
+                </div>
+              </div>
+            }
 
           </Modal>
-          <Modal title={`Please input your comment before cancel.`} onOk={finishCancel} onCancel={() => setIsCancelModal(false)} visible={isCancelModal}>
+          <Modal title={`Please input your comment before cancel.`} onOk={finishCancel} onCancel={() => setIsCancelModal(false)} open={isCancelModal}>
             <Form>
               <Form.Item>
                 <TextArea onChange={(e) => setCancelCommit(e?.target?.innerHTML)} />

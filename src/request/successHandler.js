@@ -10,11 +10,11 @@ const successHandler = (response, options = { notifyOnSuccess: false, notifyOnFa
 
     if (options.notifyOnSuccess) {
       notification.config({
-        duration: 5,
+        duration: 2,
       });
       notification.success({
         message: `Request success`,
-        description: successText,
+        // description: successText,
       });
     }
   } else {
@@ -23,7 +23,7 @@ const successHandler = (response, options = { notifyOnSuccess: false, notifyOnFa
     const { status } = response;
     if (options.notifyOnFailed) {
       notification.config({
-        duration: 5,
+        duration: 3,
       });
       notification.error({
         message: `Request error ${status}`,

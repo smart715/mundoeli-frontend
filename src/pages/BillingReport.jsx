@@ -416,8 +416,8 @@ const InvoiceHistory = (props) => {
   return (
     <DashboardLayout>
 
-      <Layout style={{ minHeight: '100vh' }}>
-        <Modal title="Recurrent invoice" visible={isModal} onCancel={handleModal} footer={null} width={1000}>
+      <Layout>
+        <Modal title="Recurrent invoice" open={isModal} onCancel={handleModal} footer={null} width={1000}>
           <Form
             ref={RecurrentRef}
             name="basic"

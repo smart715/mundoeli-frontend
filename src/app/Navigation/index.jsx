@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Layout, Menu } from 'antd';
+import { useSelector } from 'react-redux';
 
 import { useAppContext } from '@/context/appContext';
 import {
@@ -18,6 +19,7 @@ import {
 
 import history from '@/utils/history';
 import photo from '@/style/LogoEli.jpg';
+import shortPhoto from '@/style/shortEli.jpg'
 
 const { Sider } = Layout;
 const { SubMenu } = Menu;
@@ -27,9 +29,7 @@ export default function Navigation() {
   const { isNavMenuClose } = stateApp;
   const { navMenu } = appContextAction;
   const [showLogoApp, setLogoApp] = useState(isNavMenuClose);
-  const { is_admin: is_admin } = JSON.parse(localStorage?.auth)
-  // const userInfo = window.localStorage.auth ? JSON.parse(window.localStorage.auth) : {};
-  // console.log(userInfo, 'userInfo');
+  const { is_admin, is_primary_company } = useSelector((state) => state.auth);
   useEffect(() => {
     if (isNavMenuClose) {
       setLogoApp(isNavMenuClose);
@@ -41,15 +41,29 @@ export default function Navigation() {
     }, 200);
     return () => clearTimeout(timer);
   }, [isNavMenuClose]);
+
+  const [siderHeight, setSiderHeight] = useState(window.innerHeight - 48);
+  useEffect(() => {
+    const handleResize = () => {
+      setSiderHeight(window.innerHeight - 48);
+    };
+
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
+
   const onCollapse = () => {
     navMenu.collapse();
   };
   return (
     <>
-      <Sider collapsible collapsed={isNavMenuClose} onCollapse={onCollapse} className="navigation overflow-scroll">
+      <Sider collapsible collapsed={isNavMenuClose} onCollapse={onCollapse} className="navigation overflow-y-scroll" style={{ height: siderHeight }}>
         <div className="logo">
           <img
-            src={photo}
+            src={isNavMenuClose ? shortPhoto : photo}
             alt="Logo"
             style={{ display: "block", width: '100%' }}
           />
@@ -63,37 +77,39 @@ export default function Navigation() {
             <Link to={'/reservations'} />
             Reservations
           </Menu.Item>
-          <Menu.Item key={'RDCheckout'} icon={<MoneyCollectOutlined />}>
-            <Link to={'/rd_checkout'} />
-            RD-Checkout
-          </Menu.Item>
-          <Menu.Item key={'Payments'} icon={<MoneyCollectOutlined />}>
-            <Link to={'/payments'} />
-            Payments
-          </Menu.Item>
+          {is_primary_company ?
+            <Menu.Item key={'RDCheckout'} icon={<MoneyCollectOutlined />}>
+              <Link to={'/rd_checkout'} />
+              RD-Checkout
+            </Menu.Item> : null}
+          {is_primary_company ?
+            <Menu.Item key={'Payments'} icon={<MoneyCollectOutlined />}>
+              <Link to={'/payments'} />
+              Payments
+            </Menu.Item> : null}
           <SubMenu key={'Reports'} icon={<SettingOutlined />} title={'Reports'}>
+            <Menu.Item key={"DailyReport"} icon={<SettingOutlined />}>
+              <Link to={'/daily_report'} />
+              Daily Payments
+            </Menu.Item>
             <Menu.Item key={"PaymentReport"} icon={<SettingOutlined />}>
               <Link to={'/payment_report'} />
-              PaymentReport
+              Weekly Payments
             </Menu.Item>
             <Menu.Item key={"Report1"} icon={<SettingOutlined />}>
               <Link to={'/report1'} />
-              Report1
-            </Menu.Item>
-            <Menu.Item key={'Report2'} icon={<TeamOutlined />}>
-              <Link to={'/report2'} />
-              Report2
+              Annual Sales
             </Menu.Item>
             <Menu.Item key={'Report3'} icon={<FundProjectionScreenOutlined />}>
               <Link to={'/report3'} />
-              Report3
+              Monthly Reports
             </Menu.Item>
           </SubMenu>
           <SubMenu key={'Settings'} icon={<SettingOutlined />} title={'Settings'}>
-            <Menu.Item key={"SystemInfo"} icon={<SettingOutlined />}>
+            {is_admin ? <Menu.Item key={"SystemInfo"} icon={<SettingOutlined />}>
               <Link to={'/system_info'} />
               SystemInfo
-            </Menu.Item>
+            </Menu.Item> : null}
             {is_admin ? <Menu.Item key={'Admin'} icon={<TeamOutlined />}>
               <Link to={'/admin'} />
               Users
@@ -114,10 +130,10 @@ export default function Navigation() {
               <Link to={'/company_list'} />
               Company
             </Menu.Item> : null}
-            <Menu.Item key={'Payment Method'} icon={<FundProjectionScreenOutlined />}>
+            {is_admin ? <Menu.Item key={'Payment Method'} icon={<FundProjectionScreenOutlined />}>
               <Link to={'/payment_method'} />
               Payment Method
-            </Menu.Item>
+            </Menu.Item> : null}
           </SubMenu>
           <SubMenu key={'Profile'} icon={<UserOutlined />} title={'Profile'}>
             <Menu.Item key={`Edit`} icon={<EditOutlined />} onClick={() => history.push('/user_edit')}>

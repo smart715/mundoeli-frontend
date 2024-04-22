@@ -299,8 +299,8 @@ const Company = () => {
   return (
 
     <DashboardLayout>
-      <Layout style={{ minHeight: '100vh' }}>
-        <Modal title="Create Form" visible={isModalVisible} onOk={handleOk} onCancel={handleCancel} footer={null}>
+      <Layout>
+        <Modal title="Create Form" open={isModalVisible} onOk={handleOk} onCancel={handleCancel} footer={null}>
           <>
             <Form
               ref={formRef}

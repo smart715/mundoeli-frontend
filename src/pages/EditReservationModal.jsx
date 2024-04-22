@@ -1,15 +1,16 @@
 import moment from "moment";
 import CustomerModal from "./CustomerModal";
 import ProductCreationModal from "./ProductCreationModal";
-import { sendEmailWithCreation } from "./common";
+import { sendEmailWithCreation, priceFormat, dateFormat } from "./common";
 const { default: SelectAsync } = require("@/components/SelectAsync");
 const { crud } = require("@/redux/crud/actions");
 const { request } = require("@/request");
 const { CheckOutlined, EditFilled, PlusCircleOutlined } = require("@ant-design/icons");
 const { Button, Form, Table, Statistic, Col, Row, Input, Checkbox, Select, Modal, message } = require("antd");
 const { useForm } = require("antd/lib/form/Form");
-const { useEffect, useState } = require("react");
+const { useEffect, useState, useCallback } = require("react");
 const { useDispatch } = require("react-redux");
+const { id: currentUserId } = JSON.parse(localStorage.auth)
 
 const EditReservationModal = ({ setDetectSaveData, detectSaveData, currentItem, customerInfo, currentCustomerId, isEditReserva, setIsEditReserva }) => {
     const paymentHistoryColumn = [
@@ -24,7 +25,7 @@ const EditReservationModal = ({ setDetectSaveData, detectSaveData, currentItem, 
             title: 'Date',
             dataIndex: 'created',
             render: (created) => {
-                return moment(new Date(created)).format('DD/MM/YY')
+                return moment(new Date(created)).format('DD/MM/YY HH:mm A')
             }
         },
         {
@@ -34,6 +35,20 @@ const EditReservationModal = ({ setDetectSaveData, detectSaveData, currentItem, 
         {
             title: 'User',
             dataIndex: [`user_id`, `name`]
+        },
+        {
+            title: 'Status',
+            dataIndex: 'status',
+            render: (status) => {
+
+                if (status === -1) {
+                    return <span className='badge badge-light-danger'>Cancelled</span>
+                } else if (status === 1) {
+                    return <span className='badge badge-light-success'>Active</span>
+                } else {
+                    return <span className='badge badge-light-primary'>Completed</span>
+                }
+            }
         },
 
     ];
@@ -48,8 +63,10 @@ const EditReservationModal = ({ setDetectSaveData, detectSaveData, currentItem, 
     const [isModalVisible, setIsModalVisible] = useState(false);
     const [productObj, setProductObj] = useState(false);
     const [isPreventa, setIsPreventa] = useState(false);
+    const [productTypes, setProductTypes] = useState([]);
     const [_editForm] = useForm();
-    const [emailFooter, setEmailFooter] = useState('')
+    const [isTax, setIsTax] = useState(false);
+    const [taxPercent, setTaxPercent] = useState(0);
 
     const handleBankModal = () => {
         setIsEditReserva(false)
@@ -57,7 +74,7 @@ const EditReservationModal = ({ setDetectSaveData, detectSaveData, currentItem, 
     const editedDataSave = async (values) => {
         const id = currentId;
         if (currentId) {
-            console.log(currentId, values, customerInfo, 'currentId');
+            console.log("-", currentItem, currentId, values, customerInfo, 'currentId');
             console.log(isPreventa, !values?.is_preventa);
             if (isPreventa && !values?.is_preventa) {
                 const mailInfo = [];
@@ -67,9 +84,15 @@ const EditReservationModal = ({ setDetectSaveData, detectSaveData, currentItem, 
                         mailInfo.push({ ...values, product_info: obj });
                     }
                 }
-                await sendEmailWithCreation(mailInfo, 'active_from_preventa', customerInfo, emailFooter)
+                await sendEmailWithCreation(mailInfo, 'active_from_preventa', customerInfo)
             }
             dispatch(crud.update({ entity: `customerReversation`, id, jsonData: values }));
+
+            let descriptionStr = "Edited";
+            if (currentItem?.product_price !== values?.product_price)
+                descriptionStr = "Price Edited $" + priceFormat(currentItem.product_price) + " - $" + priceFormat(values?.product_price);
+            await request.create({ entity: 'logHistory', jsonData: { log_id: id, where_: `reserva`, description: descriptionStr, user_id: currentUserId } })
+
             dispatch(crud.listByCustomerContact({ entity: `customerReversation`, jsonData: { parent_id: currentCustomerId } }));
             setIsEditReserva(false);
             setDetectSaveData(!detectSaveData);
@@ -93,7 +116,10 @@ const EditReservationModal = ({ setDetectSaveData, detectSaveData, currentItem, 
         const { result } = await request.list({ entity: `productCategories` });
         setProductCategories(result)
         setOriginProductCategories(result);
-
+    };
+    const getProductTypes = async () => {
+        const { result } = await request.list({ entity: `productTypes` });
+        setProductTypes(result)
     };
     const saveCategory = async (index) => {
         if (!_editForm.getFieldsValue()?.product_type) {
@@ -111,14 +137,27 @@ const EditReservationModal = ({ setDetectSaveData, detectSaveData, currentItem, 
         setNewCategory(values)
     }
     const getPaymentHistories = async (item) => {
-        const { result } = await request.listById({ entity: 'paymentHistory', jsonData: { reserva_id: item?._id } });
-        setPaymentHistories(result || [])
+        const { result } = await request.listById({ entity: 'paymentHistory', jsonData: { 'reservation.reserva_id': item?._id } });
+
+        const paymentHistories = result.map(column => ({
+            ...column,
+            amount: priceFormat(column.reservation.find(item => item._id === item?._id)?.amount || 0)
+        }));
+        setPaymentHistories(paymentHistories || [])
     }
+
     useEffect(() => {
         (async () => {
-            const { result } = await request.list({ entity: 'systemInfo' });
-            setEmailFooter(result[0]?.email_footer)
+            const { result: taxInfo } = await request.list({ entity: "systemInfo" });
+            if (taxInfo?.length) setTaxPercent(taxInfo[0]?.tax_percent)
+            else setTaxPercent(0);
+        })()
+
+    }, []);
+    useEffect(() => {
+        (async () => {
             getPaymentHistories(currentItem)
+            await getProductTypes();
             await getProductCategories();
             setCurrentId(currentItem?._id);
             setIsPreventa(currentItem?.is_preventa)
@@ -127,7 +166,9 @@ const EditReservationModal = ({ setDetectSaveData, detectSaveData, currentItem, 
                     ...currentItem,
                     product_name: currentItem?.product_name?._id,
                     product_type: currentItem?.product_type?._id,
-                    pending_amount: (currentItem?.product_price - currentItem?.paid_amount)
+                    pending_amount: isTax ? (currentItem?.product_price - currentItem?.paid_amount + currentItem?.product_price * taxPercent / 100) : currentItem?.product_price - currentItem?.paid_amount,
+                    tax_price: isTax ? (currentItem?.product_price * taxPercent / 100) : 0,
+                    total_amount: isTax ? (parseFloat(currentItem?.product_price) + currentItem?.product_price * taxPercent / 100) : currentItem?.product_price,
                 });
             const filteredProduct = [...originProductCategories.filter(obj => { if (currentItem?.product_type?._id == obj?.product_type?._id) return obj })]
             setProductCategories([...filteredProduct])
@@ -139,14 +180,30 @@ const EditReservationModal = ({ setDetectSaveData, detectSaveData, currentItem, 
                 return obj;
             }
         })
-        console.log(productList, `productList`);
+        const selectedProductType = productTypes.find((obj) => (obj?._id === value))
+
         setProductCategories(productList);
-        // _editForm.setFieldsValue({ product_name: productList[0]?._id })
+        // if (productList.length > 0)
+        //     _editForm.setFieldsValue({ product_name: productList[0]?._id })
+        _editForm.setFieldsValue({ company_name: selectedProductType?.company_name })
+
     }
+
+    const addTaxPercent = useCallback((checked) => {
+        setIsTax(checked)
+        const getFormData = _editForm.getFieldsValue();
+        getFormData['pending_amount'] = checked ? (getFormData['product_price'] - getFormData['paid_amount'] + getFormData['product_price'] * taxPercent / 100) : (getFormData['product_price'] - getFormData['paid_amount']);
+        getFormData['tax_price'] = checked ? (getFormData['product_price'] * taxPercent / 100) : 0;
+        getFormData['total_amount'] = checked ? (parseFloat(getFormData['product_price']) + getFormData['product_price'] * taxPercent / 100) : getFormData['product_price'];
+        _editForm.setFieldsValue(getFormData)
+    }, [taxPercent])
     const [checked, setChecked] = useState(false);
     return (
         <>
-            <Modal title="Edit Reserve" visible={isEditReserva} onCancel={handleBankModal} footer={null} width={1000}>
+            <Modal title={<>Edit Reserve
+                <span style={{ float: 'right', margin: '0px 20px', fontSize: 'large' }}> R{currentItem.reserva_id} | {dateFormat(currentItem.created)}</span>
+
+            </>} open={isEditReserva} onCancel={handleBankModal} footer={null} width={1000}>
                 <Form
                     className="ant-advanced-search-form"
                     form={_editForm}
@@ -211,7 +268,7 @@ const EditReservationModal = ({ setDetectSaveData, detectSaveData, currentItem, 
                                 },
                             ]}
                         >
-                            <SelectAsync entity={`companyList`} displayLabels={[`company_name`]} />
+                            <SelectAsync disabled entity={`companyList`} displayLabels={[`company_name`]} />
                         </Form.Item>
                     </Row>
                     <Row style={{ display: 'flex', justifyContent: 'space-around', width: '100%' }}>
@@ -249,10 +306,13 @@ const EditReservationModal = ({ setDetectSaveData, detectSaveData, currentItem, 
                                             return obj
                                         }
                                     })
-                                    var formData = _editForm.getFieldsValue();
-                                    if (formData) {
-                                        formData[`product_price`] = product_price;
-                                        _editForm.setFieldsValue(formData)
+                                    var getFormData = _editForm.getFieldsValue();
+                                    if (getFormData) {
+                                        getFormData[`product_price`] = product_price;
+                                        getFormData['pending_amount'] = isTax ? (parseFloat(product_price) - getFormData['paid_amount'] + product_price * taxPercent / 100) : (parseFloat(product_price) - getFormData['paid_amount']);
+                                        getFormData['tax_price'] = isTax ? (product_price * taxPercent / 100) : 0;
+                                        getFormData['total_amount'] = isTax ? (parseFloat(product_price) + product_price * taxPercent / 100) : product_price;
+                                        _editForm.setFieldsValue(getFormData)
                                     }
                                 }}
                             >
@@ -276,7 +336,9 @@ const EditReservationModal = ({ setDetectSaveData, detectSaveData, currentItem, 
                                     required: true,
                                     validator: ({ field }, product_price,) => {
                                         const getFormData = _editForm.getFieldsValue();
-                                        getFormData['pending_amount'] = product_price - getFormData['paid_amount']
+                                        getFormData['pending_amount'] = isTax ? (parseFloat(product_price) - getFormData['paid_amount'] + product_price * taxPercent / 100) : (product_price - getFormData['paid_amount']);
+                                        getFormData['tax_price'] = isTax ? (product_price * taxPercent / 100) : 0;
+                                        getFormData['total_amount'] = isTax ? (parseFloat(product_price) + product_price * taxPercent / 100) : product_price;
                                         _editForm.setFieldsValue(getFormData)
                                         if (parseFloat(getFormData['paid_amount'] || 0) > parseFloat(product_price || 0)) {
                                             return Promise.reject('Paid amount cannot be greater than total price');
@@ -291,12 +353,21 @@ const EditReservationModal = ({ setDetectSaveData, detectSaveData, currentItem, 
                         </Form.Item>
                         <Form.Item
                             // wrapperCol={24}
+                            label="Tax"
+                            name={`is_tax`}
+                            valuePropName="checked"
+                            style={{ width: '5%' }}
+                        >
+                            <Checkbox checked={isTax} onChange={(e) => addTaxPercent(e.target.checked)}></Checkbox>
+                        </Form.Item>
+                        <Form.Item
+                            // wrapperCol={24}
                             label="Preventa"
                             name={`is_preventa`}
                             valuePropName="checked"
-                            style={{ width: '10%' }}
+                            style={{ width: '5%' }}
                         >
-                            <Checkbox checked={checked} onChange={(e) => setChecked(e.target.checked)}>Yes</Checkbox>
+                            <Checkbox checked={checked} onChange={(e) => setChecked(e.target.checked)}></Checkbox>
                         </Form.Item>
                         <Form.Item
                             style={{ width: '25%' }}
@@ -309,18 +380,42 @@ const EditReservationModal = ({ setDetectSaveData, detectSaveData, currentItem, 
                     </Row>
                     <Row>
                         <Col span={12}>
-
-                            <h2>Payment History</h2>
+                            <h2>Payment Details</h2>
                         </Col>
-                        <Col span={6}>
+                    </Row>
+                    <Row>
+                        <Col span={5}>
+                            <Form.Item name={`product_price`}>
+                                <Statistic title="Subtotal Amount" prefix={`$`} formatter={value => priceFormat(value)} />
+                            </Form.Item>
+                        </Col>
+                        <Col span={4}>
+                            {
+                                isTax &&
+                                <Form.Item name={`tax_price`}>
+                                    <Statistic title="Tax Amount" prefix={`$`} formatter={value => priceFormat(value)} />
+                                </Form.Item>
+                            }
+                        </Col>
+                        <Col span={5}>
+                            <Form.Item name={`total_amount`}>
+                                <Statistic title="Total Amount" prefix={`$`} formatter={value => priceFormat(value)} />
+                            </Form.Item>
+                        </Col>
+                        <Col span={5}>
                             <Form.Item name={`paid_amount`}>
-                                <Statistic title="Paid" prefix={`$`} />
+                                <Statistic title="Paid Amount" prefix={`$`} formatter={value => priceFormat(value)} />
                             </Form.Item>
                         </Col>
-                        <Col span={6}>
+                        <Col span={5}>
                             <Form.Item name={`pending_amount`}>
-                                <Statistic title="Pending Amount" prefix={`$`} />
+                                <Statistic title="Pending Amount" prefix={`$`} formatter={value => priceFormat(value)} />
                             </Form.Item>
+                        </Col>
+                    </Row>
+                    <Row>
+                        <Col span={12}>
+                            <h2>Payment History</h2>
                         </Col>
                     </Row>
                     <Table

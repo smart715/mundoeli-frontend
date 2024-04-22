@@ -908,7 +908,7 @@ const Contract = (props) => {
     return (
 
         <div className="whiteBox shadow">
-            <Modal title="Work Contract" visible={isBankModal} onCancel={handleBankModal} footer={null} width={900}>
+            <Modal title="Work Contract" open={isBankModal} onCancel={handleBankModal} footer={null} width={900}>
                 <Form
                     ref={formRef}
                     name="basic"
@@ -1102,7 +1102,7 @@ const Contract = (props) => {
                 <>
                 </>
             </Modal>
-            <Modal title="Accumulated Vacations" visible={isVacation} onCancel={handleVac} footer={null} width={800}>
+            <Modal title="Accumulated Vacations" open={isVacation} onCancel={handleVac} footer={null} width={800}>
                 <Table
                     bordered
                     dataSource={vacItems || []}
@@ -1142,7 +1142,7 @@ const Contract = (props) => {
                     columns={paymentHistory}
                 />
             </Modal>
-            <Modal title="Accumulated DTM" visible={isDtm} onCancel={handleDtm} footer={null} width={800}>
+            <Modal title="Accumulated DTM" open={isDtm} onCancel={handleDtm} footer={null} width={800}>
                 <Table
                     bordered
                     dataSource={dtmItems || []}
@@ -1182,7 +1182,7 @@ const Contract = (props) => {
                     columns={paymentHistory}
                 />
             </Modal>
-            <Modal title="Teminate Modal" visible={isTerminateModal} onCancel={handleTeminateModal} footer={null} width={600}>
+            <Modal title="Teminate Modal" open={isTerminateModal} onCancel={handleTeminateModal} footer={null} width={600}>
                 <Form
                     onFinish={handleTeminate}
                 >

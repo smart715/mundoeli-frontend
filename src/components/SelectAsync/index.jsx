@@ -13,7 +13,8 @@ export default function SelectAsync({
   _width,
   notFoundContent = false,
   className = '',
-  placeholder = ''
+  placeholder = '',
+  disabled = false
 }) {
   const [isLoading, setIsLoading] = useState(false);
   const [selectOptions, setOptions] = useState([]);
@@ -48,7 +49,8 @@ export default function SelectAsync({
       placeholder={placeholder}
       optionFilterProp="children"
       loading={isLoading}
-      disabled={isLoading}
+      // disabled={isLoading}
+      disabled={disabled}
       value={currentValue}
       notFoundContent={notFoundContent}
       onChange={(newValue) => {
@@ -60,7 +62,6 @@ export default function SelectAsync({
     >
       {selectOptions.map((optionField) => (
         <Select.Option
-
           key={optionField[outputValue] || optionField}
           value={optionField[outputValue] || optionField}
         >

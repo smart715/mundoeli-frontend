@@ -78,7 +78,7 @@ const ProjectBillingHistory = (props) => {
     }
     return (
         <div className="whiteBox shadow">
-            <Modal title="Products" visible={isProducts} onCancel={handleProducts} footer={null}>
+            <Modal title="Products" open={isProducts} onCancel={handleProducts} footer={null}>
                 <h3>{projectDetail}</h3>
             </Modal>
 

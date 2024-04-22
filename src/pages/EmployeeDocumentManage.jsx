@@ -204,7 +204,7 @@ const EmployeeDocumentManage = (props) => {
 
     return (
         <div className="whiteBox shadow">
-            <Modal title="File" visible={isModal} onCancel={handleModal} footer={null} width={700}>
+            <Modal title="File" open={isModal} onCancel={handleModal} footer={null} width={700}>
                 <Row gutter={24}>
 
 

@@ -1,13 +1,16 @@
 import { DashboardLayout } from "@/layout";
 import { Layout, PageHeader, Table, Button, Card } from "antd";
-import { CompanyPicker, MonthlyPicker, YearlyPicker, priceFormat, WeeklyPicker } from "./common";
+import { CompanyPicker, PaymentMethodPicker, YearlyPicker, priceFormat, WeeklyPicker, primaryCompanyInfo } from "./common";
 import { useCallback, useEffect, useState } from "react";
 import { request } from "@/request";
 import moment from "moment";
 import _ from "lodash";
+import { useSelector } from 'react-redux';
 
 const SecondReportView = () => {
-    const [selectedCompany, setSelectedCompany] = useState();
+    const { is_admin, company_id } = useSelector((state) => state.auth);
+    const [selectedCompany, setSelectedCompany] = useState(company_id);
+    const [selectedMethod, setSelectedMethod] = useState();
     const [selectedYear, setSelectedYear] = useState('2024');
     const [selectedWeek, setSelectedWeek] = useState('');
     const [paymentInfos, setPaymentInfos] = useState([]);
@@ -15,91 +18,173 @@ const SecondReportView = () => {
     const [reportColumn, setReportColumn] = useState([]);
     const [showTable, setShowTable] = useState(false)
     const [totalAmount, setTotalAmount] = useState(0)
-    const { is_admin: is_admin } = JSON.parse(localStorage?.auth)
-    const { company_id: company_id } = JSON.parse(localStorage?.auth)
+    const [primaryAmount, setPrimaryAmount] = useState(0)
+    const [primaryCompany, setPrimaryCompany] = useState(0)
+    const [isLoading, setIsLoading] = useState(true);
     useEffect(() => {
         (async () => {
             const { result } = await request.list({ entity: 'paymentHistory' });
             setPaymentInfos(result);
+            const { result: ret } = await request.listById({ entity: 'companyList', jsonData: { primary: true } });
+            setPrimaryCompany(ret[0]);
+
+            setIsLoading(false);
         })()
     },
         []);
     useEffect(() => {
+        console.log("selectedCompany", selectedCompany);
         setShowTable(false)
         setTotalAmount(0)
 
         setInitData([])
-        if (is_admin == true || company_id == selectedCompany?._id) {
+        if (is_admin === true || company_id === selectedCompany?._id) {
             setShowTable(true)
         }
-        const filteredPayments = paymentInfos.filter(payment => {
-            // Get the week and year of the payment creation date
-            const paymentWeek = moment(payment.created).week();
+
+        console.log('%cfrontend\src\pages\PaymentReport.jsx:56 paymentInfos', 'color: #007acc;', paymentInfos);
+        let totalAmount = 0;
+        let primaryAmount = 0;
+        let processedPayments = [].concat(...paymentInfos.map(payment => {
+            const paymentWeek = moment(payment.created).isoWeek();
             const paymentYear = moment(payment.created).year();
+            if (payment.orders)
+                return payment.orders.filter(order =>
+                    (selectedMethod?._id === '0' || payment?.method_id?._id === selectedMethod?._id) &&
+                    paymentWeek === selectedWeek &&
+                    paymentYear === selectedYear &&
+                    order._id.product_type.company_name._id === selectedCompany?._id
+                ).map(order => {
+                    totalAmount += payment.order_price * order.product_price * order.count / payment.sub_total;
+                    if (payment?.user_id?.company_id === primaryCompany._id) {
+                        primaryAmount += (payment.order_price * order.product_price * order.count / payment.sub_total)
+                            * (100 - (payment.method_id?.deduction ? payment.method_id?.deduction : 0)) / 100;
+                    }
+                    return {
+                        date: moment(payment.created).format('DD/MM/YY hh:mm:ss A'),
+                        productName: order._id.product_name,
+                        productPrice: '$' + priceFormat(order.product_price),
+                        productType: order._id.product_type.product_name,
+                        customerName: 'P' + payment.payment_id + ' | ' + (payment.customer_id?.name ? payment.customer_id?.name : 'checkout'),
+                        description: order.product_description || '',
+                        deduction: payment.method_id?.method_name + "-$" + parseFloat(order.product_price * order.count * (payment.method_id?.deduction ? payment.method_id?.deduction : 0) / 100).toFixed(2),
+                        mPayment: payment?.user_id?.company_id === primaryCompany._id ? '$' + parseFloat(order.product_price * order.count * (payment.method_id?.deduction ? 100 - payment.method_id?.deduction : 100) / 100).toFixed(2) : '$0.00',
+                        userName: payment.user_id?.name
+                    };
+                });
+        }));
+        processedPayments = processedPayments.concat(...paymentInfos.map(payment => {
+            if (payment.reservation)
+                return payment.reservation.filter(reserver =>
+                    (selectedMethod?._id === '0' || reserver?.reserva_id?.method?._id === selectedMethod?._id) &&
+                    reserver?.reserva_id.status === 2 &&
+                    moment(reserver.reserva_id.delivered_date).isoWeek() === selectedWeek &&
+                    moment(reserver.reserva_id.delivered_date).year() === selectedYear &&
+                    reserver.reserva_id.product_type.company_name._id === selectedCompany?._id
+                ).map(reserver => {
+                    totalAmount += reserver.amount;
 
-            // Check if the payment's week and year match the selected week and year
-            if (paymentWeek === selectedWeek && paymentYear === selectedYear) {
-                // Check if the payment's user_id's company_id matches the selected company
-                if (payment?.user_id?.company_id === selectedCompany?._id) {
-                    return true; // Payment matches the filter criteria
-                }
-            }
-            return false; // Payment does not match the filter criteria
-        });
-        console.log('%cfrontend\src\pages\PaymentReport.jsx:56 filteredPayments', 'color: #007acc;', filteredPayments);
-        let totalAmount = 0
-        totalAmount = filteredPayments.map(payment => {
-            return payment.sub_total
-        });
+                    if (payment?.user_id?.company_id === primaryCompany._id) {
+                        primaryAmount += reserver.amount * (100 - (reserver.reserva_id.method.deduction ? reserver.reserva_id.method.deduction : 0)) / 100;
+                    }
+                    return {
+                        date: moment(reserver.reserva_id.delivered_date).format('DD/MM/YY hh:mm:ss A'),
+                        productName: reserver.reserva_id.product_name.category_name,
+                        productPrice: '$' + priceFormat(reserver.reserva_id.product_price),
+                        productType: reserver.reserva_id.product_type.product_name,
+                        customerName: 'R' + reserver.reserva_id.reserva_id + ' - P' + payment.payment_id + ' | ' + payment.customer_id?.name,
+                        description: reserver?.reserva_id?.notes || '',
+                        deduction: reserver.reserva_id.method.method_name + "-$" + parseFloat(reserver.amount * (reserver.reserva_id.method.deduction ? reserver.reserva_id.method.deduction : 0) / 100).toFixed(2),
+                        mPayment: payment?.user_id?.company_id === primaryCompany._id ? '$' + parseFloat(reserver.amount * (reserver.reserva_id.method.deduction ? 100 - reserver.reserva_id.method.deduction : 100) / 100).toFixed(2) : '$0.00',
+                        userName: payment.user_id?.name
+                    };
+                });
+        }));
         setTotalAmount(totalAmount)
-        const processedPayments = filteredPayments.map(payment => {
-            return payment.orders.map(order => {
-                return {
-                    date: moment(payment.created).format('YYYY-MM-DD'),
-                    productName: order._id.product_name,
-                    productPrice: order._id.product_price,
-                    productType: order._id.product_type.product_name,
-                    userName: payment.user_id.name
-                };
-            });
-
-        });
+        setPrimaryAmount(primaryAmount)
 
         console.log('%cfrontend\src\pages\PaymentReport.jsx:56 processedPayments', 'color: #007acc;', processedPayments);
-        if (selectedCompany && selectedYear && selectedWeek && processedPayments.length > 0) {
+        if (selectedCompany && selectedYear && selectedWeek) {
             const _reportColumn = [{
                 title: 'Date',
                 dataIndex: 'date',
-
+                fixed: 'left',
+                width: 200,
+                render: (text) => (
+                    <div style={{ whiteSpace: 'nowrap' }}>{text}</div>
+                ),
             },
             {
-                title: 'product Name',
+                title: 'Type',
                 dataIndex: 'productType',
-                width: 200
-            }
-                ,
+                width: 200,
+                render: (text) => (
+                    <div style={{ whiteSpace: 'nowrap' }}>{text}</div>
+                ),
+            },
             {
-                title: 'product Name',
-                dataIndex: 'productPrice',
-                width: 200
-            }
-                ,
-            {
-                title: 'productType',
+                title: 'Product',
                 dataIndex: 'productName',
-                width: 200
+                width: 200,
+                render: (text) => (
+                    <div style={{ whiteSpace: 'nowrap' }}>{text}</div>
+                ),
+            },
+            {
+                title: 'Customer',
+                dataIndex: 'customerName',
+                width: 200,
+                render: (text) => (
+                    <div style={{ whiteSpace: 'nowrap' }}>{text}</div>
+                ),
+            },
+            {
+                title: 'Description',
+                dataIndex: 'description',
+                width: 200,
+                render: (text) => (
+                    <div style={{ whiteSpace: 'nowrap' }}>{text}</div>
+                ),
+            },
+            {
+                title: 'Item Price',
+                dataIndex: 'productPrice',
+                width: 200,
+                render: (text) => (
+                    <div style={{ whiteSpace: 'nowrap' }}>{text}</div>
+                ),
+            },
+            {
+                title: 'Deduction',
+                dataIndex: 'deduction',
+                width: 200,
+                render: (text) => (
+                    <div style={{ whiteSpace: 'nowrap' }}>{text}</div>
+                ),
+            },
+            {
+                title: 'Payment',
+                dataIndex: 'mPayment',
+                width: 200,
+                render: (text) => (
+                    <div style={{ whiteSpace: 'nowrap' }}>{text}</div>
+                ),
             },
             {
                 title: 'User',
                 dataIndex: 'userName',
-                width: 200
-            }]
+                width: 200,
+                render: (text) => (
+                    <div style={{ whiteSpace: 'nowrap' }}>{text}</div>
+                ),
+            }
+            ]
 
             setReportColumn(_reportColumn);
-            setInitData(processedPayments[0]);
+            setInitData(processedPayments);
         }
     }, [
-        selectedCompany, selectedYear, paymentInfos, selectedWeek
+        primaryCompany, selectedCompany, selectedMethod, selectedYear, paymentInfos, selectedWeek
     ]);
     const paginationConfig = {
         pageSize: 100,
@@ -130,20 +215,25 @@ const SecondReportView = () => {
     };
     return (
         <DashboardLayout>
-            <PageHeader title="Monthly Reports" onBack={() => { window['history'].back() }}
+            <PageHeader title="Mundoeli Weekly Reports" onBack={() => { window['history'].back() }}
             ></PageHeader>
             <Layout>
                 <div className="d-inline">
-                    <YearlyPicker onChange={setSelectedYear} />
-                    <WeeklyPicker onChange={setSelectedWeek} selectedYear={selectedYear} />
-                    <CompanyPicker onChange={setSelectedCompany} />
+                    <YearlyPicker onChange={setSelectedYear} />&nbsp;
+                    <WeeklyPicker onChange={setSelectedWeek} selectedYear={selectedYear} />&nbsp;
+                    <CompanyPicker onChange={setSelectedCompany} />&nbsp;
+                    <PaymentMethodPicker onChange={setSelectedMethod} />&nbsp;
                     <Button id="btnExport" onClick={handleClick}>Export</Button>
                     &nbsp;
                     &nbsp;
-                    <Button type="primary">{totalAmount}</Button>
+                    <div style={{ float: 'right' }}>
+                        <Button type="primary">Total Sales: ${totalAmount > 0 ? parseFloat(totalAmount)?.toFixed(2) : 0}</Button>
+                        &nbsp;
+                        <Button type="primary">Mundoeli Payment: ${primaryAmount > 0 ? parseFloat(primaryAmount)?.toFixed(2) : 0}</Button>
+                    </div>
                 </div>
                 <div className="d-inline py-6 overflow-scroll h-450px">
-                    {showTable ? <Table columns={reportColumn} dataSource={initData} rowKey={(item) => item.row_id} pagination={paginationConfig} /> : <>You can't access this company's data</>}
+                    {showTable ? <Table columns={reportColumn} dataSource={initData} rowKey={(item) => item.row_id} pagination={paginationConfig} loading={isLoading} /> : <>You can't access this company's data</>}
                 </div>
             </Layout>
         </DashboardLayout>

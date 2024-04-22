@@ -178,7 +178,7 @@ const InvoiceHistory = (props) => {
     }
     return (
         <div className="whiteBox shadow">
-            <Modal title="Recurrent invoice" visible={isModal} onCancel={handleModal} footer={null} width={1000}>
+            <Modal title="Recurrent invoice" open={isModal} onCancel={handleModal} footer={null} width={1000}>
                 <Form
                     ref={RecurrentRef}
                     name="basic"

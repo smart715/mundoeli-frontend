@@ -14,7 +14,7 @@ const RDCheckout = () => {
     return (
         <DashboardLayout>
             {!assignedUser && <PageHeader title="Rd Checkout" onBack={() => window.history.back()}></PageHeader>}
-            <Layout className="w-100 my-8" style={{ height: '80vh' }}>
+            <Layout className="w-100 my-8" style={{ height: assignedUser ? 'calc(100vh - 52px)' : '80vh' }}>
                 {!assignedUser && <Panel1 setAssignedUser={setAssignedUser} />}
                 {assignedUser && <Panel2 assignedUser={assignedUser} />}
             </Layout>

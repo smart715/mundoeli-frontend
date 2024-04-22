@@ -18,6 +18,8 @@ const ProductTypes = () => {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [isUpdate, setIsUpdate] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const { is_admin, is_primary_company, company_id } = useSelector((state) => state.auth);
   const showModal = () => {
     setCurrentId(new Date().valueOf())
     setIsModalVisible(true);
@@ -137,11 +139,15 @@ const ProductTypes = () => {
   };
   const getItems = async () => {
     const { result: items, pagination } = await request.list({ entity });
-    const result = items.map((obj, index) => (
+    let filter = items.filter((product_type) => (is_admin || company_id === product_type.company_name._id));
+    const result = filter.map((obj, index) => (
       { ...obj, key: index }
     ))
     if (result.length) {
       setFilterData(result)
+
+      setIsLoading(false);
+      console.log("-setIsLoading", result);
       setUserData(result)
     }
     setPagination(pagination);
@@ -170,8 +176,8 @@ const ProductTypes = () => {
           <Button onClick={showModal} type="primary">Create Type</Button>
         }
       ></PageHeader>
-      <Layout style={{ minHeight: '100vh' }}>
-        <Modal title="Create Form" visible={isModalVisible} onOk={handleOk} onCancel={handleCancel} footer={null}>
+      <Layout>
+        <Modal title="Create Form" open={isModalVisible} onOk={handleOk} onCancel={handleCancel} footer={null}>
           <>
             <Form
               form={createForm}
@@ -252,6 +258,7 @@ const ProductTypes = () => {
             key={(item) => item._id}
             dataSource={filterData}
             columns={mergedColumns}
+            loading={isLoading}
             rowClassName="editable-row"
             pagination={{
               total: filterData.length,

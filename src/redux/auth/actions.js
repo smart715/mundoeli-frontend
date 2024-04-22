@@ -15,8 +15,10 @@ export const login =
       if (data.success === true) {
         console.log('%cfrontend\src\redux\auth\actions.js:16 data.result', 'color: #007acc;', data.result);
         window.localStorage.setItem('isLoggedIn', true);
-        window.localStorage.setItem('auth', JSON.stringify(data.result.admin));
+        window.localStorage.setItem('is_admin', data.result.admin.is_admin);
+        window.localStorage.setItem('is_primary_company', data.result.admin.is_primary_company);
         window.localStorage.setItem('company_id', data.result.company_id);
+        window.localStorage.setItem('auth', JSON.stringify(data.result.admin));
         dispatch({
           type: actionTypes.LOGIN_SUCCESS,
           payload: data.result.admin,

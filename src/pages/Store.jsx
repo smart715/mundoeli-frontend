@@ -356,13 +356,13 @@ const Store = () => {
   return (
 
     <DashboardLayout>
-      <Layout style={{ minHeight: '100vh' }}>
+      <Layout>
 
-        <Modal title="Products" visible={isProducts} onCancel={handleProducts} footer={null}>
+        <Modal title="Products" open={isProducts} onCancel={handleProducts} footer={null}>
           <h3>{currentProducts}</h3>
         </Modal>
 
-        <Modal title="Employees" visible={isModal} onCancel={cancelModal} footer={null} width={1000}>
+        <Modal title="Employees" open={isModal} onCancel={cancelModal} footer={null} width={1000}>
           <Table
             columns={employeeColumns}
             dataSource={employeeDatas || []}

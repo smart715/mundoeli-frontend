@@ -7,6 +7,7 @@ import moment from "moment";
 import _ from "lodash";
 
 const ThirdReportView = () => {
+    const [totalAmount, setTotalAmount] = useState(0)
     const [selectedCompany, setSelectedCompany] = useState();
     const [selectedYear, setSelectedYear] = useState();
     const [selectedMonth, setSelectedMonth] = useState();
@@ -16,6 +17,7 @@ const ThirdReportView = () => {
     const [showTable, setShowTable] = useState(false)
     const { is_admin: is_admin } = JSON.parse(localStorage?.auth)
     const { company_id: company_id } = JSON.parse(localStorage?.auth)
+    const [isLoading, setIsLoading] = useState(true);
     useEffect(() => {
         (async () => {
             const { result } = await request.list({ entity: 'paymentHistory' });
@@ -41,25 +43,27 @@ const ThirdReportView = () => {
         for (var i = 0; i < _paymentInfos?.length; i++) {
             var obj = _paymentInfos[i];
             if (obj?.status === 1) {
-                if (obj?.checkout) {
+                if (obj?.orders) {
                     var _arr = obj?.orders;
                     for (var _i = 0; _i < _arr?.length; _i++) {
                         arr.push({
-                            amount: priceFormat(_arr[_i]?._id?.product_price),
+                            amount: priceFormat(_arr[_i]?.product_price) * _arr[_i]?.count,
                             count: _arr[_i]?.count,
                             product_type: _arr[_i]?._id?.product_type?._id,
                             created: obj?.created
                         })
                     }
-                } else {
+                }
+                if (obj?.reservation) {
                     var __arr = obj?.reservation;
                     for (var i_ = 0; i_ < __arr?.length; i_++) {
-                        arr.push({
-                            amount: priceFormat(__arr[i_]?.amount),
-                            count: 1,
-                            product_type: __arr[i_]?.reserva_id?.product_type?._id,
-                            created: obj?.created
-                        })
+                        if (__arr[i_]?.reserva_id?.status === 2)
+                            arr.push({
+                                amount: priceFormat(__arr[i_]?.amount),
+                                count: 1,
+                                product_type: __arr[i_]?.reserva_id?.product_type?._id,
+                                created: obj?.created
+                            })
                     }
                 }
             }
@@ -69,7 +73,7 @@ const ThirdReportView = () => {
     const getTotalAmount = (data) => {
         var amount = 0;
         for (var i = 0; i < 31; i++) {
-            const element = data[`month_${i + 1}`];
+            const element = data[`month_${i + 1}_amount`];
             amount += element || 0;
         }
         return amount;
@@ -90,21 +94,33 @@ const ThirdReportView = () => {
         if (selectedCompany && selectedYear) {
             (async () => {
                 const _reportColumn = [{
-                    title: 'Product Type ',
+                    title: 'Type ',
                     dataIndex: 'product_type',
                     width: 120,
+                    fixed: 'left',
+                    render: (text) => (
+                        <div style={{ whiteSpace: 'nowrap' }}>{text}</div>
+                    ),
                 },
                 {
                     title: 'Total',
                     dataIndex: 'total_label',
-                    width: 80
+                    width: 80,
+                    render: (text) => (
+                        <div style={{ whiteSpace: 'nowrap' }}>{text}</div>
+                    ),
                 }]
-                for (var i = 0; i < 12; i++) {
-                    var monthLabel = moment().set('months', i).format('MMM');
+                for (let i = 0; i < 12; i++) {
+                    let monthLabel = moment().set('months', i).format('MMM');
+                    let link = "/report2?company=" + selectedCompany._id + "&year=" + selectedYear + "&month=" + i;
                     _reportColumn.push({
-                        title: monthLabel,
-                        dataIndex: `month_${i + 1}_count`,
-                        width: 70
+                        title: <a href={link} style={{ whiteSpace: 'nowrap', color: 'black' }}> {monthLabel}</a>,
+                        dataIndex: `month_${i + 1}`,
+                        width: 70,
+                        render: (text) => (
+                            // <a href={link} style={{ whiteSpace: 'nowrap', color: 'black' }}>{text}</a>
+                            <div style={{ whiteSpace: 'nowrap', color: 'black' }}>{text}</div>
+                        ),
                     });
                 }
                 setReportColumn(_reportColumn);
@@ -117,8 +133,9 @@ const ThirdReportView = () => {
                     obj['product_type'] = product?.product_name;
                     for (var j = 0; j < 12; j++) {
                         const date_str = moment(new Date(`${selectedYear}-${j + 1}`)).format('YYYY-MM');
-                        obj[`month_${j + 1}`] = getPaymentObjWithDate(date_str, { ...product })[0];
+                        obj[`month_${j + 1}_amount`] = getPaymentObjWithDate(date_str, { ...product })[0];
                         obj[`month_${j + 1}_count`] = getPaymentObjWithDate(date_str, { ...product })[1];
+                        obj[`month_${j + 1}`] = `${obj[`month_${j + 1}_count`]} / $${priceFormat(obj[`month_${j + 1}_amount`])}`;
                     }
                     obj['total_amount'] = getTotalAmount(obj);
                     obj['total_count'] = getTotalCount(obj);
@@ -128,16 +145,21 @@ const ThirdReportView = () => {
                     obj = {};
                 }
                 const _obj = {};
+                let total_amount = 0;
                 for (var _j = 0; _j < 12; _j++) {
                     _obj[`month_${_j + 1}_count`] = _.sumBy(reportData, `month_${_j + 1}_count`)
+                    _obj[`month_${_j + 1}`] = `${_.sumBy(reportData, `month_${_j + 1}_count`)} / $${priceFormat(_.sumBy(reportData, `month_${_j + 1}_amount`))}`
+                    total_amount += _.sumBy(reportData, `month_${_j + 1}_amount`);
                 }
-                reportData.push({
-                    product_type: "Total",
-                    row_id: reportData.length,
-                    total_label: `${_.sumBy(reportData, 'total_count')} / $${priceFormat(_.sumBy(reportData, 'total_amount'))}`,
-                    ..._obj
-                })
+                setTotalAmount(total_amount);
+                // reportData.push({
+                //     product_type: "Total",
+                //     row_id: reportData.length,
+                //     total_label: `${_.sumBy(reportData, 'total_count')} / $${priceFormat(_.sumBy(reportData, 'total_amount'))}`,
+                //     ..._obj
+                // })
                 setInitData(reportData);
+                setIsLoading(false);
             })()
         }
     }, [
@@ -172,16 +194,19 @@ const ThirdReportView = () => {
     };
     return (
         <DashboardLayout>
-            <PageHeader title="Monthly Reports" onBack={() => { window['history'].back() }}
+            <PageHeader title="Per type Sales Report" onBack={() => { window['history'].back() }}
             ></PageHeader>
             <Layout>
                 <div className="d-inline">
-                    <YearlyPicker onChange={setSelectedYear} />
-                    <CompanyPicker onChange={setSelectedCompany} />
+                    <YearlyPicker onChange={setSelectedYear} />&nbsp;
+                    <CompanyPicker onChange={setSelectedCompany} />&nbsp;
                     <Button id="btnExport" onClick={handleClick}>Export</Button>
+                    <div style={{ float: 'right' }}>
+                        <Button type="primary">Total Sales: ${totalAmount > 0 ? parseFloat(totalAmount)?.toFixed(2) : 0}</Button>
+                    </div>
                 </div>
                 <div className="d-inline py-6 overflow-scroll h-450px">
-                    {showTable ? <Table columns={reportColumn} dataSource={initData} rowKey={(item) => item.row_id} pagination={paginationConfig} /> : <>You can't access this company's data</>}
+                    {showTable ? <Table columns={reportColumn} dataSource={initData} rowKey={(item) => item.row_id} pagination={paginationConfig} loading={isLoading} /> : <>You can't access this company's data</>}
                 </div>
             </Layout>
         </DashboardLayout>

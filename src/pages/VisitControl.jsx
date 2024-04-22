@@ -737,8 +737,8 @@ const VisitControl = () => {
   return (
 
     <DashboardLayout>
-      <Layout style={{ minHeight: '100vh' }}>
-        <Modal title="Create Form" visible={isModalVisible} onOk={handleOk} onCancel={handleCancel} footer={null} width={1000}>
+      <Layout>
+        <Modal title="Create Form" open={isModalVisible} onOk={handleOk} onCancel={handleCancel} footer={null} width={1000}>
           <>
             <Form
               ref={formRef}
@@ -905,7 +905,7 @@ const VisitControl = () => {
           </>
         </Modal>
 
-        <Modal title="History Form" visible={isHistory} onCancel={closeModal} footer={null} width={700}>
+        <Modal title="History Form" open={isHistory} onCancel={closeModal} footer={null} width={700}>
           <Table
             columns={historyColumns}
             dataSource={historyData || []}
@@ -913,7 +913,7 @@ const VisitControl = () => {
           />
         </Modal>
 
-        <Modal title="Inspection Form" visible={isInspectionModal} onCancel={closeInspectionModal} footer={null} width={900}>
+        <Modal title="Inspection Form" open={isInspectionModal} onCancel={closeInspectionModal} footer={null} width={900}>
 
           <h3>Encargado de inspección : {inspectionOfficer}</h3>
           <h3>Cliente: Percepción del servicio el último mes / alguna oportunidad de mejora : {customerPerception}</h3>
@@ -957,7 +957,7 @@ const VisitControl = () => {
             dataSource={data || []}
           /> */}
         </Modal>
-        <Modal title="Form" visible={isClientStore} onCancel={() => setIsClientStore(false)} footer={null} width={800}>
+        <Modal title="Form" open={isClientStore} onCancel={() => setIsClientStore(false)} footer={null} width={800}>
           <Button type='primary' onClick={() => setIsHistory(true)}>History</Button>
           <Table
             columns={[

@@ -174,7 +174,7 @@ const ProjectPaymentManagement = () => {
   return (
 
     <DashboardLayout>
-      <Layout style={{ minHeight: ' 100vh' }}>
+      <Layout>
 
         <Layout>
           <Form form={form} component={false}>

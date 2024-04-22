@@ -52,7 +52,7 @@ const ProductCreationModal = ({ checkout = false, handleUpdatedInfo, productInfo
         }
     }, [productInfo, thirdParty, _form])
     return (
-        <Modal title="Create Form" visible={isModalVisible} onOk={handleOk} onCancel={handleCancel} footer={null}>
+        <Modal title="Create Form" open={isModalVisible} onOk={handleOk} onCancel={handleCancel} footer={null}>
             <>
                 <Form
                     ref={formRef}
